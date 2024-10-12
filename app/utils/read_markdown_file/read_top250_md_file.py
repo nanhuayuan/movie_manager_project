@@ -59,7 +59,3 @@ class ReadTop250MdFile:
         #logger.info(len(allMd))
         return allMd
 
-if __name__ == "__main__":
-    #fanhao_md_info()
-    # 解析md获得信息
-    #mdInfo = get_top_250_movie_info_from_md()
