@@ -1,0 +1,24 @@
+blinker==1.8.2
+cffi @ file:///C:/b/abs_78eb1_vq6z/croot/cffi_1714483206096/work
+click==8.1.7
+colorama==0.4.6
+cryptography @ file:///C:/b/abs_35g500qir4/croot/cryptography_1724940575116/work
+cx-Oracle==8.3.0
+Flask==3.0.3
+flask-sqlacodegen==2.0.0
+Flask-SQLAlchemy==3.1.1
+greenlet==3.0.3
+importlib_metadata==8.4.0
+inflect==7.3.1
+itsdangerous==2.2.0
+Jinja2==3.1.4
+MarkupSafe==2.1.5
+more-itertools==10.5.0
+pycparser @ file:///tmp/build/80754af9/pycparser_1636541352034/work
+PyMySQL @ file:///C:/ci/pymysql_1610464861530/work
+sqlacodegen==2.3.0.post1
+SQLAlchemy==1.4.54
+typeguard==4.3.0
+typing_extensions==4.12.2
+Werkzeug==3.0.4
+zipp==3.20.1

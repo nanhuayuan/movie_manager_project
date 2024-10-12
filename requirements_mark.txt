@@ -1,0 +1,24 @@
+这个 requirements.txt 文件包含了以下主要组件：
+
+Flask: 用于构建 Web 应用程序的轻量级框架。
+SQLAlchemy: 用于数据库操作的 ORM。
+Alembic: 用于数据库迁移。
+PyMySQL: MySQL 数据库驱动。
+Marshmallow: 用于数据序列化和反序列化。
+Dependency Injector: 用于依赖注入。
+PyYAML: 用于解析 YAML 配置文件。
+Requests 和 BeautifulSoup4: 用于网络请求和网页解析。
+Redis: Redis 客户端，用于缓存。
+python-qbittorrent: qBittorrent 的 Python API 客户端。
+jellyfin-apiclient-python: Jellyfin 的 Python API 客户端。
+aiohttp: 用于异步 HTTP 请求。
+structlog: 用于结构化日志记录。
+pytest: 用于单元测试。
+flake8 和 black: 用于代码检查和格式化。
+mypy: 用于静态类型检查。
+python-dotenv: 用于从 .env 文件加载环境变量。
+python-dateutil: 用于处理日期和时间。
+Celery: 用于异步任务队列。
+tqdm: 用于显示进度条。
+
+要安装这些依赖，您可以在项目的根目录下运行以下命令：

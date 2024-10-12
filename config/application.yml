@@ -1,0 +1,72 @@
+# 数据库配置
+database:
+  host: "localhost"
+  port: 3306
+  user: root
+  password: 123456
+  dbname: movies
+  echo: false  # 是否打印SQL语句日志
+  pool_size: 10
+  max_overflow: 20
+
+# 缓存配置 (Redis)
+redis:
+  host: localhost
+  port: 6379
+  db: 0
+  password: null
+  cache_timeout_seconds: 300  # 缓存超时时间
+
+# Jellyfin API 配置
+jellyfin:
+  #api_url: "http://qnap.nas.com:8096"
+  #api_key: "8fa1a15a2a484d6fb86167cd31b3cef2"
+  #user_id: 'b128da17dbf5412bac37c096e25f2de5'
+  #item_id: 'ab532873de6a4fcd09ca15f5d59cd55a'
+  #playlists_id: '953141ca3d64b4e0bf3ff52b29bcbbab'
+  api_url: "http://127.0.0.1:8096"
+  api_key: "1d4f983cf0a04522a444965fdfbfde9e" #密钥
+  user_id: '5207a4b5a7bf4167ae81ba9d5f341c74' #root用户ID
+  item_id: '3227ce1e069754c594af25ea66d69fc7' #电影库Id
+  playlists_id: 'c89aa4ba14db3d46f85eef3ad0f8a569'  # 播放列表ID,未更新
+
+# Everything 配置
+everything:
+  exe_path: C:/Program Files/Everything/Everything.exe  # Everything.exe 的路径
+  search_timeout_seconds: 5  # 搜索超时时间
+  host: "localhost"
+  port: 3306
+  search_path: "D:/Movies"
+  file_extensions:
+    - mp4
+    - mkv
+    - avi
+
+# 爬虫配置
+web_scraper:
+  #user_agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3
+  user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+  timeout_seconds: 10  # 请求超时时间
+  retry_attempts: 3    # 爬虫重试次数
+
+# 下载工具配置 (qbittorrent)
+qbittorrent:
+  host: "localhost"
+  port: 8080
+  username: "admin"
+  password: "adminadmin"
+  max_retry_attempts: 3  # 下载失败时重试次数
+  download_folder: /path/to/download/folder  # 下载文件的保存路径
+
+# 电影列表 markdown 文件路径
+movie_list_path: "./data/movies_list/"
+
+app:
+  name: MovieListDownloader
+  environment: development  # 可选 development, production
+  movie_list_file: ./data/movies_list/  # 本地电影榜单文件路径
+
+# 日志设置
+logging:
+  level: "INFO"
+  file: "./logs/movie_manager.log"
