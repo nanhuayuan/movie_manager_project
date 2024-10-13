@@ -3,7 +3,7 @@ from typing import List, Optional
 import logging
 
 from app.model.search_types import SearchType
-from app.config.config_app import AppConfig
+from app.config.app_config import AppConfig
 
 
 class EverythingUtils:

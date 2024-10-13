@@ -23,7 +23,7 @@ class ChartDAO(BaseDAO[Chart]):
         try:
             flg = self.get_by_name(chart.name)
             if flg is None:
-                return self.chart_dao.create(chart)
+                return self.create(chart)
             else:
                 return flg
         except Exception as e:
@@ -32,10 +32,14 @@ class ChartDAO(BaseDAO[Chart]):
             return None
 
     def get_by_name(self, name: str) -> Optional[Chart]:
-
         with db.session_scope() as session:
-            obj =  session.query(Chart).filter(Chart.name == name).first()
-            return self._clone_object(obj, session) if obj else None
+            try:
+                obj = session.query(Chart).filter(Chart.name == name).first()
+                return self._clone_object(obj, session) if obj else None
+            except Exception as e:
+                print(f"Error in get_by_name: {e}")
+                session.rollback()
+                return None
 
     def find_by_keyword(self, keyword: str) -> List[Chart]:
         """

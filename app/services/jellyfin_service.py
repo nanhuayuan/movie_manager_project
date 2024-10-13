@@ -23,7 +23,7 @@ class JellyfinService:
         Args:
             jellyfin_util (JellyfinUtilInterface): Jellyfin 工具接口的实现实例
         """
-        self.jellyfin_util = jellyfin_util  if jellyfin_util is not None else JellyfinUtil()
+        self.jellyfin_util = jellyfin_util if jellyfin_util is not None else JellyfinUtil()
         logging.info("Jellyfin 服务已初始化")
 
     def check_movie_exists(self, title: str) -> bool:
@@ -95,7 +95,6 @@ class JellyfinService:
         # 记录获取到的电影数量
         logging.info(f"获取到 {len(movies)} 部电影的信息")
         return movies
-
 
     def search_by_serial_number(self, serial_number: str, user_id: str = '') -> str:
         """

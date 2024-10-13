@@ -1,4 +1,4 @@
-from app.config.config_log import load_logging_config
+from app.config.log_config import load_logging_config
 
 # 加载日志配置
 load_logging_config()

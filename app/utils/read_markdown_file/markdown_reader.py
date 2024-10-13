@@ -5,7 +5,7 @@ import logging
 from concurrent.futures import ThreadPoolExecutor
 import threading
 
-from app.config.config_app import AppConfig
+from app.config.app_config import AppConfig
 from app.model.md_file import md_file
 
 # 配置日志记录器

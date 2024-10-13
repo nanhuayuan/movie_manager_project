@@ -8,7 +8,7 @@ import logging
 from concurrent.futures import ThreadPoolExecutor
 import threading
 
-from app.config.config_app import AppConfig
+from app.config.app_config import AppConfig
 from app.dao import ChartEntryDAO, ChartEntryDAO
 from app.model.chart_file_type_enun import ChartFileType
 from app.model.db.movie_model import Movie, ChartEntry
@@ -39,7 +39,7 @@ class ChartEntryService:
             raise ValueError("chart_entry must be an instance of ChartEntry")
 
         try:
-            flg = self.get_by_movie_id(chart_entry.movie_id)
+            flg = self.chart_entry_dao.get_by_movie_id(chart_entry.movie_id)
             if flg is None:
                 return self.chart_entry_dao.create(chart_entry)
             else:
@@ -49,8 +49,3 @@ class ChartEntryService:
             print(f"An error occurred: {e}")
             return None
 
-    def get_by_movie_id(self, movie_id: int) -> Optional[ChartEntry]:
-
-        with db.session_scope() as session:
-            obj =  session.query(ChartEntry).filter(ChartEntry.movie_id == movie_id).first()
-            return self._clone_object(obj, session) if obj else None

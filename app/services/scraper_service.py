@@ -2,7 +2,7 @@ import requests
 from bs4 import BeautifulSoup
 import logging
 
-from app.config.config_app import AppConfig
+from app.config.app_config import AppConfig
 from app.services.actor_service import ActorService
 from app.services.studio_service import StudioService
 

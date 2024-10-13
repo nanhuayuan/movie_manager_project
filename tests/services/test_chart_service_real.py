@@ -1,25 +1,45 @@
-import unittest
-from unittest.mock import MagicMock, patch
-from app.services.chart_service import ChartService
-from app.model.chart_file_type_enun import ChartFileType
-from app.model.db.movie_model import ChartType
+import pytest
+from flask import Flask
+from flask_sqlalchemy import SQLAlchemy
 
-class TestChartService(unittest.TestCase):
+# 假设这是你的应用工厂函数或者获取 app 和 db 的方法
+from app.main import create_app
+from app.utils.db_util import db
 
-    def setUp(self):
-        # 假设的初始化操作，可以根据实际情况添加
-        self.chart_service = ChartService()
+@pytest.fixture(scope='session')
+def app():
+    app = create_app()
+    return app
 
+@pytest.fixture(scope='session')
+def _db(app):
+    # 使用应用中已存在的 db 实例
+    return db
 
-    def test_get_movie_chart_and_chary_type_default(self):
-        # 测试默认参数情况
-        charts, chart_type = self.chart_service.get_movie_chart_and_chary_type()
+@pytest.fixture(scope='function')
+def session(app, _db):
+    with app.app_context():
+        connection = _db.engine.connect()
+        transaction = connection.begin()
+        options = dict(bind=connection, binds={})
+        session = _db.create_scoped_session(options=options)
+        _db.session = session
 
-        flg = self.chart_service.save_chart_data_to_db_and_cache(md_file_list=charts, chart_type=chart_type)
+        yield session
 
-        print(flg)
+        transaction.rollback()
+        connection.close()
+        session.remove()
 
+@pytest.fixture
+def chart_service():
+    from app.services.chart_service import ChartService
+    return ChartService()
 
+def test_get_movie_chart_and_chary_type_default(app, session, chart_service):
+    with app.app_context():
+        charts, chart_type = chart_service.get_movie_chart_and_chary_type()
+        flg = chart_service.save_chart_data_to_db_and_cache(md_file_list=charts, chart_type=chart_type)
+        assert flg is not None  # 根据实际情况修改断言
 
-if __name__ == '__main__':
-    unittest.main()
+# 更多测试用例...

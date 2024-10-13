@@ -8,7 +8,7 @@ import logging
 from concurrent.futures import ThreadPoolExecutor
 import threading
 
-from app.config.config_app import AppConfig
+from app.config.app_config import AppConfig
 from app.dao import ChartTypeDAO
 from app.model.chart_file_type_enun import ChartFileType
 from app.model.db.movie_model import Movie, ChartType
@@ -20,6 +20,12 @@ from app.utils.read_markdown_file.normal_markdown_reader import NormalMarkdownRe
 from app.utils.read_markdown_file.top250_markdown_reader import Top250MarkdownReader
 
 logger = logging.getLogger(__name__)
+
+import logging
+
+logging.basicConfig()
+logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
+
 
 @dataclass
 class ChartTypeService:
@@ -38,9 +44,6 @@ class ChartTypeService:
     def __post_init__(self):
         """初始化服务，注册默认的读取器"""
 
-
-
-
     def __init__(self):
 
         self.config = AppConfig().get_md_file_path_config()
@@ -50,26 +53,28 @@ class ChartTypeService:
         self.chart_type_description = self.config.get('chart_type_description', '')
 
         self.chart_type_dao = ChartTypeDAO()
-        self.chart_type = ChartType(name=self.chart_type_name, description=self.chart_type_description, chart_file_type=self.chart_file_type)
-
+        self.chart_type = ChartType(name=self.chart_type_name, description=self.chart_type_description,
+                                    chart_file_type=self.chart_file_type)
 
     def get_by_name_or_create(self, chart_type: ChartType = None) -> Optional[ChartType]:
-        """
-        根据名称获取榜单类型，如果不存在则创建一个新的
-        """
+        print(f"Entering get_by_name_or_create with chart_type: {chart_type}")
         if chart_type is None:
             chart_type = self.chart_type
+        print(f"Using chart_type: {chart_type}")
 
         if not isinstance(chart_type, ChartType):
             raise ValueError("chart_type must be an instance of ChartType")
 
         try:
+            print(f"Attempting to get_by_name with: {chart_type.name}")
             flg = self.chart_type_dao.get_by_name(chart_type.name)
+            print(f"Result of get_by_name: {flg}")
             if flg is None:
+                print("Creating new chart_type")
                 return self.chart_type_dao.create(chart_type)
             else:
+                print("Returning existing chart_type")
                 return flg
         except Exception as e:
-            # 处理异常
             print(f"An error occurred: {e}")
             return None

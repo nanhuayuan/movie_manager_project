@@ -1,6 +1,6 @@
 # myproject/main.py
-from app.config.config_log import LogConfig
-from app.config.config_app import AppConfig
+from app.config.log_config import LogConfig
+from app.config.app_config import AppConfig
 from app.database.db_logger import setup_db_logger
 from app.database.database import Database
 

@@ -1,4 +1,4 @@
-from app.config.config_app import AppConfig
+from app.config.app_config import AppConfig
 
 
 class QBittorrentUtil:

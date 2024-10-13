@@ -3,6 +3,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from app.services.cache_service import CacheService
+from app.services.chart_service import ChartService
 from app.services.movie_service import MovieService
 from app.services.jellyfin_service import JellyfinService
 from app.services.everything_service import EverythingService
@@ -10,7 +11,9 @@ from app.services.scraper_service import ScraperService
 from app.services.qbittorrent_service import QBittorrentService
 from app.dao.movie_dao import MovieDAO
 from app.dao.magnet_dao import MagnetDAO
+from app.utils import EverythingUtils
 from app.utils.jellyfin_util import JellyfinUtil
+from app.utils.qbittorrent_util import QBittorrentUtil
 from app.utils.redis_client import RedisUtil
 
 class Container(containers.DeclarativeContainer):
@@ -25,7 +28,7 @@ class Container(containers.DeclarativeContainer):
     # Database
     db_engine = providers.Singleton(create_engine, config.database.url)
     db_session_factory = providers.Singleton(sessionmaker, bind=db_engine)
-    db_session = providers.Scoped(db_session_factory)
+    #db_session = providers.Scoped(db_session_factory)
 
     # 单例提供者，确保整个应用只有一个Redis客户端实例
     redis_util = providers.Singleton(RedisUtil)
@@ -33,7 +36,7 @@ class Container(containers.DeclarativeContainer):
     # Utils
     qbittorrent_util = providers.Singleton(QBittorrentUtil)
     jellyfin_util = providers.Singleton(JellyfinUtil)
-    everything_util = providers.Singleton(EverythingUtil)
+    everything_util = providers.Singleton(EverythingUtils)
 
     # 工厂提供者，每次请求时创建新的DAO实例
     movie_dao = providers.Singleton(MovieDAO)
@@ -68,4 +71,4 @@ class Container(containers.DeclarativeContainer):
         qbittorrent_util=qbittorrent_util
     )
 
-    chart_service = providers.Singleton(ChartService, chart_dao=chart_dao)
+    chart_service = providers.Singleton(ChartService)

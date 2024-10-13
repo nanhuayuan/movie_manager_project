@@ -1,7 +1,7 @@
 import logging
 
 from app.utils import EverythingUtils
-from app.config.config_log import load_logging_config
+from app.config.log_config import load_logging_config
 # from configbak import
 from app.utils.read_markdown_file import read_line_md_file
 from app.utils.read_markdown_file import read_top250_md_file

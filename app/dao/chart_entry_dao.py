@@ -1,4 +1,6 @@
 # app/dao/chart_entry_dao.py
+from typing import Optional
+
 from sqlalchemy.exc import SQLAlchemyError
 
 from .base_dao import BaseDAO
@@ -11,6 +13,12 @@ from ..utils.db_util import db
 class ChartEntryDAO(BaseDAO[ChartEntry]):
     def __init__(self):
         super().__init__(ChartEntry)
+
+    def get_by_movie_id(self, movie_id: int) -> Optional[ChartEntry]:
+
+        with db.session_scope() as session:
+            obj =  session.query(ChartEntry).filter(ChartEntry.movie_id == movie_id).first()
+            return self._clone_object(obj, session) if obj else None
 
     def get_by_chart_and_movie(self, chart_id: int, movie_id: int) -> ChartEntry:
         return db.session.query(ChartEntry).filter(

@@ -1,4 +1,4 @@
-# config_app.py
+# app_config.py
 from app.config.base_config import BaseConfig
 
 
@@ -53,7 +53,7 @@ class AppConfig(BaseConfig):
 
 
 # 以下为调用
-from app.config.config_app import AppConfig
+from app.config.app_config import AppConfig
 
 
 def main():

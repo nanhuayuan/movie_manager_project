@@ -8,7 +8,7 @@ import logging
 from concurrent.futures import ThreadPoolExecutor
 import threading
 
-from app.config.config_app import AppConfig
+from app.config.app_config import AppConfig
 from app.dao import ChartDAO, MovieDAO
 from app.model.chart_file_type_enun import ChartFileType
 from app.model.db.movie_model import Movie, ChartType, Chart, ChartEntry

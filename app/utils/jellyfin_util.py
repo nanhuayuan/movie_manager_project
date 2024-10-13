@@ -4,7 +4,7 @@ import logging
 
 from jellyfinapi.jellyfinapi_client import JellyfinapiClient
 
-from app.config.config_app import AppConfig
+from app.config.app_config import AppConfig
 from app.utils.interfaces.jellyfin_util_interface import JellyfinUtilInterface
 
 

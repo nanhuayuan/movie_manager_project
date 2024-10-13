@@ -17,7 +17,7 @@ class ConfigLoader:
 
 
 # 以下为调用
-from app.config.config_app import ConfigLoader
+from app.config.app_config import ConfigLoader
 
 def main():
     config_loader = ConfigLoader()

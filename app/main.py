@@ -1,7 +1,7 @@
 from flask import Flask
 
 from app import controllers, services
-from app.config.config_app import AppConfig
+from app.config.app_config import AppConfig
 from app.container import Container
 from app.controllers.movie_controller import init_app as init_movie_controller
 import yaml
@@ -34,9 +34,9 @@ def create_app():
     # 这一步需要吗？
     app.container = container
     # 注册蓝图
-    from controllers.movie_controller import movie_bp
+    #from app.controllers.movie_controller import movie_bp
     #from controllers.chart_controller import chart_bp
-    app.register_blueprint(movie_bp)
+    #app.register_blueprint(movie_bp)
     #app.register_blueprint(chart_bp)
 
 

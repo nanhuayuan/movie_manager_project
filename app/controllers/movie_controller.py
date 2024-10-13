@@ -7,7 +7,7 @@ from app.schemas.movie_schema import MovieSchema
 import logging
 
 # 创建一个Blueprint用于组织和管理与电影相关的路由
-movie_bp = Blueprint('movie', __name__)
+movie_bp = Blueprint(name='movie', import_name=__name__)
 ma = Marshmallow()
 
 

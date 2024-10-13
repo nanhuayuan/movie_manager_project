@@ -1,6 +1,6 @@
-# utils/config_log.py
+# utils/log_config.py
 
-# config_log.py
+# log_config.py
 from app.config.base_config import BaseConfig
 from typing import Any, Dict
 

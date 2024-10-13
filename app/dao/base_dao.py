@@ -1,6 +1,7 @@
 # app/dao/base_dao.py
+import logging
 from typing import Generic, TypeVar, Type, Optional, List, Dict, Any, Tuple
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 from sqlalchemy import and_, or_, desc, asc
 from sqlalchemy.orm import Query
 from functools import wraps
@@ -65,6 +66,10 @@ class BaseDAO(Generic[T], metaclass=Singleton):
                         setattr(new_obj, relationship.key, getattr(obj, relationship.key))
 
                 return new_obj
+            except IntegrityError:
+                session.rollback()
+                logging.warning(f"IntegrityError while creating : {e}")
+                raise e
             except SQLAlchemyError as e:
                 session.rollback()
                 raise e
@@ -95,13 +100,11 @@ class BaseDAO(Generic[T], metaclass=Singleton):
             return self._clone_object(obj, session) if obj else None
 
     def get_all(self, page: int = 1, per_page: int = 10) -> Tuple[List[T], int]:
-        """获取所有记录，支持分页"""
         with db.session_scope() as session:
             query = session.query(self.model)
             total = query.count()
             items = query.offset((page - 1) * per_page).limit(per_page).all()
-            return self._clone_list(items), total
-
+            return self._clone_list(items, session), total
     def update(self, obj: T) -> T:
         """更新现有记录"""
         with db.session_scope() as session:
@@ -229,7 +232,7 @@ class BaseDAO(Generic[T], metaclass=Singleton):
             results = bound_query.all()
             return self._clone_list(results)
 
-    def _clone_object(self, obj: T, session) -> T:
+    def _clone_object_old(self, obj: T, session) -> T:
         """克隆对象，确保返回的对象不与会话绑定"""
         if obj is None:
             return None
@@ -245,6 +248,23 @@ class BaseDAO(Generic[T], metaclass=Singleton):
 
         return new_obj
 
+    def _clone_object(self, obj: T, session=None) -> T:
+        if obj is None:
+            return None
+
+        new_obj = self.model()
+        for column in obj.__table__.columns:
+            setattr(new_obj, column.name, getattr(obj, column.name))
+
+        # 只复制简单的关系属性，避免复杂的级联加载
+        for relationship in obj.__mapper__.relationships:
+            if relationship.uselist:
+                continue  # 跳过多对多关系
+            related_obj = getattr(obj, relationship.key, None)
+            if related_obj:
+                setattr(new_obj, relationship.key, related_obj)
+
+        return new_obj
     def _clone_list(self, objects: List[T]) -> List[T]:
         """克隆对象列表，确保返回的所有对象都不与会话绑定"""
         return [self._clone_object(obj) for obj in objects]

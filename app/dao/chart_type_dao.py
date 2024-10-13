@@ -20,8 +20,13 @@ class ChartTypeDAO(BaseDAO[ChartType]):
             Optional[ChartType]: 如果找到则返回 ChartType 对象，否则返回 None
         """
         with db.session_scope() as session:
-            obj =  session.query(ChartType).filter(ChartType.name == name).first()
-            return self._clone_object(obj, session) if obj else None
+            try:
+                obj = session.query(ChartType).filter(ChartType.name == name).first()
+                return self._clone_object(obj, session) if obj else None
+            except Exception as e:
+                print(f"Error in get_by_name: {e}")
+                session.rollback()
+                return None
 
 
 

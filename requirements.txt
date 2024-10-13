@@ -1,3 +1,4 @@
+Requests==2.31.0
 beautifulsoup4==4.12.3
 chart==0.2.3
 dependency_injector==4.41.0
@@ -12,9 +13,8 @@ psycopg2==2.9.3
 pytest==7.3.1
 python_qbittorrent==0.4.3
 PyYAML==6.0
-PyYAML==6.0.2
 redis==4.5.5
-Requests==2.32.3
+
 series==2.35.36
+PyMySQL==1.0.3
 SQLAlchemy==2.0.15
-studio==0.5.1
