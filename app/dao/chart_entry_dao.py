@@ -4,24 +4,20 @@ from typing import Optional
 from sqlalchemy.exc import SQLAlchemyError
 
 from .base_dao import BaseDAO
-from app.model.db.movie_model  import ChartEntry
-
-from ..model.enums import DownloadStatus
-from ..utils.db_util import db
-
+from app.model.db.movie_model import ChartEntry
+from app.model.enums import DownloadStatus
+#from app import db  # 假设您的 Flask-SQLAlchemy 实例在 app/__init__.py 中定义
 
 class ChartEntryDAO(BaseDAO[ChartEntry]):
     def __init__(self):
         super().__init__(ChartEntry)
 
     def get_by_movie_id(self, movie_id: int) -> Optional[ChartEntry]:
-
-        with db.session_scope() as session:
-            obj =  session.query(ChartEntry).filter(ChartEntry.movie_id == movie_id).first()
-            return self._clone_object(obj, session) if obj else None
+        obj = self.db.session.query(ChartEntry).filter(ChartEntry.movie_id == movie_id).first()
+        return obj
 
     def get_by_chart_and_movie(self, chart_id: int, movie_id: int) -> ChartEntry:
-        return db.session.query(ChartEntry).filter(
+        return self.db.session.query(ChartEntry).filter(
             ChartEntry.chart_id == chart_id,
             ChartEntry.movie_id == movie_id
         ).first()
@@ -31,7 +27,7 @@ class ChartEntryDAO(BaseDAO[ChartEntry]):
             entry = self.get_by_id(entry_id)
             if entry:
                 entry.status = status
-                db.session.commit()
+                self.db.session.commit()
                 return True
             return False
         except SQLAlchemyError as e:

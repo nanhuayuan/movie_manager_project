@@ -5,8 +5,7 @@ from datetime import datetime
 
 from .base_dao import BaseDAO
 from app.model.db.movie_model import Chart
-from app.utils.db_util import db
-
+#from app import db  # 假设您的 Flask-SQLAlchemy 实例在 app/__init__.py 中定义
 
 class ChartDAO(BaseDAO[Chart]):
     """
@@ -32,14 +31,13 @@ class ChartDAO(BaseDAO[Chart]):
             return None
 
     def get_by_name(self, name: str) -> Optional[Chart]:
-        with db.session_scope() as session:
-            try:
-                obj = session.query(Chart).filter(Chart.name == name).first()
-                return self._clone_object(obj, session) if obj else None
-            except Exception as e:
-                print(f"Error in get_by_name: {e}")
-                session.rollback()
-                return None
+        try:
+            obj = self.db.session.query(Chart).filter(Chart.name == name).first()
+            return obj
+        except Exception as e:
+            print(f"Error in get_by_name: {e}")
+            self.db.session.rollback()
+            return None
 
     def find_by_keyword(self, keyword: str) -> List[Chart]:
         """
@@ -51,14 +49,13 @@ class ChartDAO(BaseDAO[Chart]):
         Returns:
             List[Chart]: 符合搜索条件的榜单列表
         """
-        with db.session_scope() as session:
-            search = f"%{keyword}%"
-            return session.query(Chart).filter(
-                or_(
-                    Chart.name.like(search),
-                    Chart.description.like(search)
-                )
-            ).all()
+        search = f"%{keyword}%"
+        return self.db.session.query(Chart).filter(
+            or_(
+                Chart.name.like(search),
+                Chart.description.like(search)
+            )
+        ).all()
 
     def get_recent_charts(self, limit: int = 10) -> List[Chart]:
         """
@@ -70,8 +67,7 @@ class ChartDAO(BaseDAO[Chart]):
         Returns:
             List[Chart]: 最近创建的榜单列表
         """
-        with db.session_scope() as session:
-            return session.query(Chart).order_by(desc(Chart.created_at)).limit(limit).all()
+        return self.db.session.query(Chart).order_by(desc(Chart.created_at)).limit(limit).all()
 
     def update_chart_data(self, chart_id: int, new_data: Dict[str, Any]) -> Optional[Chart]:
         """
@@ -84,17 +80,15 @@ class ChartDAO(BaseDAO[Chart]):
         Returns:
             Optional[Chart]: 更新后的榜单对象，如果榜单不存在则返回None
         """
-        with db.session_scope() as session:
-            chart = session.query(Chart).filter(Chart.id == chart_id).first()
-            if chart:
-                for key, value in new_data.items():
-                    if hasattr(chart, key):
-                        setattr(chart, key, value)
-                chart.updated_at = datetime.utcnow()
-                session.flush()
-                session.refresh(chart)
-                return chart
-            return None
+        chart = self.db.session.query(Chart).filter(Chart.id == chart_id).first()
+        if chart:
+            for key, value in new_data.items():
+                if hasattr(chart, key):
+                    setattr(chart, key, value)
+            chart.updated_at = datetime.utcnow()
+            self.db.session.commit()
+            return chart
+        return None
 
     def get_charts_by_type(self, chart_type_id: int) -> List[Chart]:
         """
@@ -106,5 +100,4 @@ class ChartDAO(BaseDAO[Chart]):
         Returns:
             List[Chart]: 指定类型的榜单列表
         """
-        with db.session_scope() as session:
-            return session.query(Chart).filter(Chart.chart_type_id == chart_type_id).all()
+        return self.db.session.query(Chart).filter(Chart.chart_type_id == chart_type_id).all()

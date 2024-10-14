@@ -1,7 +1,7 @@
 # coding: utf-8
 from flask_sqlalchemy import SQLAlchemy
 
-db = SQLAlchemy()
+from app.utils.db_util import db
 
 
 class Chart(db.Model):
@@ -12,14 +12,14 @@ class Chart(db.Model):
     name = db.Column(db.String(256, 'utf8mb4_unicode_ci'), nullable=False, server_default=db.text("''"), comment='榜单名称')
     description = db.Column(db.String(256, 'utf8mb4_unicode_ci'), nullable=False, server_default=db.text("''"),
                             comment='榜单描述')
-    # chart_type_id = db.Column(db.Integer, db.ForeignKey('chart_type.id'), nullable=False, comment='榜单类型Id，关联chart_type') # 这个是数据库层面关联
-    chart_type_id = db.Column(db.Integer, nullable=False, comment='榜单类型Id，关联chart_type')
+    chart_type_id = db.Column(db.Integer, db.ForeignKey('chart_type.id'), nullable=False, comment='榜单类型Id，关联chart_type') # 这个是数据库层面关联
+    # chart_type_id = db.Column(db.Integer, nullable=False, comment='榜单类型Id，关联chart_type')
     created_at = db.Column(db.DateTime, nullable=False, server_default=db.text("CURRENT_TIMESTAMP"), comment='榜单创建时间')
     updated_at = db.Column(db.DateTime, nullable=False,
                            server_default=db.text("CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"),
                            comment='榜单更新时间')
     # ORM层面关联
-    # chart_type = db.relationship("ChartType", back_populates="charts")
+    chart_type = db.relationship("ChartType", back_populates="charts")
     # entries = db.relationship("ChartEntry", back_populates="chart")
     # histories = db.relationship("ChartHistory", back_populates="chart")
 
@@ -82,7 +82,7 @@ class ChartType(db.Model):
                            server_default=db.text("CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"),
                            comment='更新时间')
 
-    # charts = db.relationship("Chart", back_populates="chart_type")
+    charts = db.relationship("Chart", back_populates="chart_type")
     # 评分
     chart_file_type = None
 

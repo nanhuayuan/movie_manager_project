@@ -4,7 +4,8 @@ from flask_sqlalchemy import SQLAlchemy
 
 # 假设这是你的应用工厂函数或者获取 app 和 db 的方法
 from app.main import create_app
-from app.utils.db_util import db
+from app.utils.db_util import db, get_db, init_app
+
 
 @pytest.fixture(scope='session')
 def app():
@@ -14,22 +15,29 @@ def app():
 @pytest.fixture(scope='session')
 def _db(app):
     # 使用应用中已存在的 db 实例
+    init_app(app)
+    db = get_db()
     return db
+
 
 @pytest.fixture(scope='function')
 def session(app, _db):
     with app.app_context():
         connection = _db.engine.connect()
         transaction = connection.begin()
-        options = dict(bind=connection, binds={})
-        session = _db.create_scoped_session(options=options)
-        _db.session = session
+
+        # 使用 db.session 而不是创建新的 scoped session
+        session = _db.session
+
+        # 将会话绑定到这个连接
+        session.bind = connection
 
         yield session
 
+        session.close()
         transaction.rollback()
         connection.close()
-        session.remove()
+
 
 @pytest.fixture
 def chart_service():

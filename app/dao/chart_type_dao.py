@@ -2,7 +2,7 @@
 from typing import List, Optional
 from .base_dao import BaseDAO
 from app.model.db.movie_model import ChartType
-from app.utils.db_util import db
+from flask import current_app
 
 
 class ChartTypeDAO(BaseDAO[ChartType]):
@@ -19,16 +19,12 @@ class ChartTypeDAO(BaseDAO[ChartType]):
         Returns:
             Optional[ChartType]: 如果找到则返回 ChartType 对象，否则返回 None
         """
-        with db.session_scope() as session:
-            try:
-                obj = session.query(ChartType).filter(ChartType.name == name).first()
-                return self._clone_object(obj, session) if obj else None
-            except Exception as e:
-                print(f"Error in get_by_name: {e}")
-                session.rollback()
-                return None
-
-
+        try:
+            return self.db.session.query(ChartType).filter(ChartType.name == name).first()
+        except Exception as e:
+            current_app.logger.error(f"Error in get_by_name: {e}")
+            self.db.session.rollback()
+            return None
 
     def get_all_active(self) -> List[ChartType]:
         """
@@ -37,10 +33,7 @@ class ChartTypeDAO(BaseDAO[ChartType]):
         Returns:
             List[ChartType]: 激活状态的榜单类型列表
         """
-        with db.session_scope() as session:
-            return session.query(ChartType).filter(ChartType.is_active == True).all()
-
-
+        return self.db.session.query(ChartType).filter(ChartType.is_active == True).all()
 
     def update(self, chart_type_id: int, name: Optional[str] = None,
                description: Optional[str] = None, is_active: Optional[bool] = None) -> Optional[ChartType]:
@@ -56,8 +49,8 @@ class ChartTypeDAO(BaseDAO[ChartType]):
         Returns:
             Optional[ChartType]: 更新后的榜单类型对象，如果未找到则返回 None
         """
-        with db.session_scope() as session:
-            chart_type = session.query(ChartType).filter(ChartType.id == chart_type_id).first()
+        try:
+            chart_type = self.db.session.query(ChartType).filter(ChartType.id == chart_type_id).first()
             if chart_type:
                 if name is not None:
                     chart_type.name = name
@@ -65,6 +58,10 @@ class ChartTypeDAO(BaseDAO[ChartType]):
                     chart_type.description = description
                 if is_active is not None:
                     chart_type.is_active = is_active
-                session.commit()
-                session.refresh(chart_type)
+                self.db.session.commit()
+                self.db.session.refresh(chart_type)
             return chart_type
+        except Exception as e:
+            current_app.logger.error(f"Error in update: {e}")
+            self.db.session.rollback()
+            return None
