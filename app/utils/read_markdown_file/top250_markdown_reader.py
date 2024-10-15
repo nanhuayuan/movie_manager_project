@@ -9,7 +9,7 @@ from concurrent.futures import ThreadPoolExecutor
 import threading
 
 from app.model.db.movie_model import Movie
-from app.model.md_file import md_file
+from app.model.mdfileinfo import MdFileInfo
 
 # 配置日志记录器
 from app.utils.read_markdown_file.markdown_reader import MarkdownReader
@@ -24,7 +24,7 @@ class Top250MarkdownReader(MarkdownReader):
     TAG_PREFIX = "Tag: "
     URI_PATTERN = re.compile(r'\(https://javdb521\.com(.+?)\)')
 
-    def process_file(self, file_path: Path = None) -> Optional[md_file]:
+    def process_file(self, file_path: Path = None) -> Optional[MdFileInfo]:
         """
         处理 TOP 250 榜单文件
 
@@ -32,7 +32,7 @@ class Top250MarkdownReader(MarkdownReader):
             file_path: 文件路径
 
         Returns:
-            Optional[md_file]: 处理后的 md_file 对象，失败返回 None
+            Optional[MdFileInfo]: 处理后的 md_file 对象，失败返回 None
         """
         # 检查缓存
         cached_result = self._get_cached_result(file_path)
@@ -40,7 +40,7 @@ class Top250MarkdownReader(MarkdownReader):
             return cached_result
 
         try:
-            md_file_obj = md_file()
+            md_file_obj = MdFileInfo()
             md_file_obj.file_name = file_path.name
             md_file_obj.file_path = str(file_path)
             md_file_obj.movie_info_list = []
@@ -61,7 +61,7 @@ class Top250MarkdownReader(MarkdownReader):
             return None
 
     def _process_line(self, line: str, current_movie: Optional[Movie],
-                      md_file_obj: md_file) -> Optional[Movie]:
+                      md_file_obj: MdFileInfo) -> Optional[Movie]:
         """
         处理单行内容
 
@@ -75,7 +75,7 @@ class Top250MarkdownReader(MarkdownReader):
         """
         if line.startswith(self.RANKING_PREFIX):
             current_movie = Movie()
-            current_movie.ranking = int(self._extract_value(line, self.RANKING_PREFIX))
+            current_movie.rank = int(self._extract_value(line, self.RANKING_PREFIX))
             current_movie.magnet = []
         elif line.startswith(self.TAG_PREFIX) and current_movie:
             code = self._extract_value(line, self.TAG_PREFIX)

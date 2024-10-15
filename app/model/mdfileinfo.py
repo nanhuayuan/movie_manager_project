@@ -1,6 +1,6 @@
 
 
-class md_file():
+class MdFileInfo:
     """
     文件列表
     """

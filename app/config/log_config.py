@@ -1,44 +1,26 @@
-# utils/log_config.py
-
-# log_config.py
 from app.config.base_config import BaseConfig
 from typing import Any, Dict
 
-
 class LogConfig(BaseConfig):
-    """日志配置管理类。
-
-    专门用于管理日志相关的配置，如日志级别、格式、输出位置等。
-
-    示例:
-        ```python
-        log_config = LogConfig()
-        log_level = log_config.get('level', 'INFO')
-        log_format = log_config.get('format')
-        ```
-    """
+    """日志配置管理类。"""
 
     def __init__(self):
         """初始化日志配置，加载logging.yml配置文件。"""
         super().__init__()
         self._load_config('logging')
 
-    def get_file_handler_config(self) -> Dict[str, Any]:
-        """获取文件处理器的配置。
+    def get_handler_config(self, handler_name: str) -> Dict[str, Any]:
+        """获取指定处理器的配置。"""
+        return self.get('handlers', {}).get(handler_name, {})
 
-        Returns:
-            Dict[str, Any]: 文件处理器的配置字典
-        """
-        return self.get('file_handler', {})
+    def get_formatter_config(self, formatter_name: str) -> Dict[str, Any]:
+        """获取指定格式化器的配置。"""
+        return self.get('formatters', {}).get(formatter_name, {})
 
-    def get_console_handler_config(self) -> Dict[str, Any]:
-        """获取控制台处理器的配置。
+    def get_logger_config(self, logger_name: str = 'root') -> Dict[str, Any]:
+        """获取指定日志记录器的配置。"""
+        return self.get('loggers', {}).get(logger_name, {})
 
-        Returns:
-            Dict[str, Any]: 控制台处理器的配置字典
-        """
-        return self.get('console_handler', {})
-
-    def get_db_log_config(self) -> dict:
-        """获取数据库日志配置"""
-        return self.get('handlers', {}).get('database', {})
+    def get_database_log_config(self) -> Dict[str, Any]:
+        """获取数据库日志的额外配置。"""
+        return self.get('database_log', {})

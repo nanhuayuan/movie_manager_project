@@ -48,8 +48,10 @@ def chart_service():
 
 def test_get_movie_chart_and_chary_type_default(app, session, chart_service):
     with app.app_context():
-        charts, chart_type = chart_service.get_movie_chart_and_chary_type()
-        flg = chart_service.save_chart_data_to_db_and_cache(md_file_list=charts, chart_type=chart_type)
+        result = chart_service.read_file_to_db()
+
+        md_file_list, chart_type = chart_service.get_movie_chart_and_chart_type()
+        flg = chart_service.save_chart_data_to_db_and_cache(md_file_list=md_file_list, chart_type=chart_type)
         assert flg is not None  # 根据实际情况修改断言
 
 # 更多测试用例...

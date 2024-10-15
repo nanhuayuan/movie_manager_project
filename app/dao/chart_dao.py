@@ -5,7 +5,6 @@ from datetime import datetime
 
 from .base_dao import BaseDAO
 from app.model.db.movie_model import Chart
-#from app import db  # 假设您的 Flask-SQLAlchemy 实例在 app/__init__.py 中定义
 
 class ChartDAO(BaseDAO[Chart]):
     """

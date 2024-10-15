@@ -3,7 +3,7 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 import unittest
 from app.model.db.movie_model import Movie
-from app.model.md_file import md_file
+from app.model.mdfileinfo import MdFileInfo
 from app.utils.read_markdown_file.normal_markdown_reader import NormalMarkdownReader
 
 

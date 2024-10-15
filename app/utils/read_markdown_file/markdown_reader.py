@@ -6,7 +6,7 @@ from concurrent.futures import ThreadPoolExecutor
 import threading
 
 from app.config.app_config import AppConfig
-from app.model.md_file import md_file
+from app.model.mdfileinfo import MdFileInfo
 
 # 配置日志记录器
 logger = logging.getLogger(__name__)
@@ -23,7 +23,7 @@ class MarkdownReader(ABC):
         self._cache_lock = threading.Lock()
         self.config = AppConfig().get_md_file_path_config()
 
-    def get_base_path(self, base_path: Path) -> List[md_file]:
+    def get_base_path(self, base_path: Path) -> List[MdFileInfo]:
 
         if base_path is None:
             return Path(Path(__file__).parent.parent.parent.parent / self.config['movie_list_path'])
@@ -33,11 +33,11 @@ class MarkdownReader(ABC):
 
 
     @abstractmethod
-    def process_file(self, file_path: Path = None) -> Optional[md_file]:
+    def process_file(self, file_path: Path = None) -> Optional[MdFileInfo]:
         """处理单个文件的抽象方法"""
         pass
 
-    def read_files(self, base_path: Path = None) -> List[md_file]:
+    def read_files(self, base_path: Path = None) -> List[MdFileInfo]:
         """
         读取目录下的所有有效 Markdown 文件
 
@@ -45,7 +45,7 @@ class MarkdownReader(ABC):
             base_path: 文件目录路径
 
         Returns:
-            List[md_file]: 包含电影信息的 md_file 列表
+            List[MdFileInfo]: 包含电影信息的 md_file 列表
         """
 
         base_path = self.get_base_path(base_path)
@@ -72,7 +72,7 @@ class MarkdownReader(ABC):
             logger.error(f"读取文件时发生错误: {e}")
             return []
 
-    def _get_cached_result(self, file_path: Path) -> Optional[md_file]:
+    def _get_cached_result(self, file_path: Path) -> Optional[MdFileInfo]:
         """获取缓存的处理结果"""
         with self._cache_lock:
             cache_key = str(file_path)
@@ -80,7 +80,7 @@ class MarkdownReader(ABC):
                 return self._cache[cache_key]
         return None
 
-    def _cache_result(self, file_path: Path, result: md_file):
+    def _cache_result(self, file_path: Path, result: MdFileInfo):
         """缓存处理结果"""
         with self._cache_lock:
             self._cache[str(file_path)] = result

@@ -1,6 +1,6 @@
 # coding: utf-8
 from flask_sqlalchemy import SQLAlchemy
-
+from sqlalchemy import Column, Integer, String, Date, DateTime, Float, ForeignKey, BigInteger
 from app.utils.db_util import db
 
 
@@ -20,8 +20,8 @@ class Chart(db.Model):
                            comment='榜单更新时间')
     # ORM层面关联
     chart_type = db.relationship("ChartType", back_populates="charts")
-    # entries = db.relationship("ChartEntry", back_populates="chart")
-    # histories = db.relationship("ChartHistory", back_populates="chart")
+    entries = db.relationship("ChartEntry", back_populates="chart")
+    histories = db.relationship("ChartHistory", back_populates="chart")
 
 
 class ChartEntry(db.Model):
@@ -29,10 +29,10 @@ class ChartEntry(db.Model):
     __table_args__ = {'comment': '榜单条目表'}
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True, comment='自增主键Id')
-    # chart_id = db.Column(db.Integer, db.ForeignKey('chart.id'), nullable=False, comment='榜单Id，关联chart')
-    chart_id = db.Column(db.Integer, nullable=False, comment='榜单Id，关联chart')
-    movie_id = db.Column(db.Integer, nullable=False, comment='电影Id，关联movie')
-    # movie_id = db.Column(db.Integer, db.ForeignKey('movie.id'), nullable=False, comment='电影Id，关联movie')
+    chart_id = db.Column(db.Integer, db.ForeignKey('chart.id'), nullable=False, comment='榜单Id，关联chart')
+    # chart_id = db.Column(db.Integer, nullable=False, comment='榜单Id，关联chart')
+    #movie_id = db.Column(db.Integer, nullable=False, comment='电影Id，关联movie')
+    movie_id = db.Column(db.Integer, db.ForeignKey('movie.id'), nullable=False, comment='电影Id，关联movie')
     rank = db.Column(db.Integer, nullable=False, comment='电影在榜单中的排名')
     score = db.Column(db.Float(4), nullable=False, server_default=db.text("'0.00'"), comment='电影评分')
     votes = db.Column(db.Integer, nullable=False, server_default=db.text("'0'"), comment='电影得票数或评分人数')
@@ -44,8 +44,8 @@ class ChartEntry(db.Model):
                            comment='更新时间')
 
     # ORM层面关联
-    # chart = db.relationship("Chart", back_populates="entries")
-    # movie = db.relationship("Movie", back_populates="chart_entries")
+    chart = db.relationship("Chart", back_populates="entries")
+    movie = db.relationship("Movie", back_populates="chart_entries")
 
 
 class ChartHistory(db.Model):
@@ -53,8 +53,8 @@ class ChartHistory(db.Model):
     __table_args__ = {'comment': '榜单历史表'}
 
     id = db.Column(db.Integer, primary_key=True, comment='自增主键Id')
-    # chart_id = db.Column(db.Integer, db.ForeignKey('chart.id'), nullable=False, comment='榜单Id，关联chart')
-    chart_id = db.Column(db.Integer, nullable=False, comment='榜单Id，关联chart')
+    chart_id = db.Column(db.Integer, db.ForeignKey('chart.id'), nullable=False, comment='榜单Id，关联chart')
+    # chart_id = db.Column(db.Integer, nullable=False, comment='榜单Id，关联chart')
     movie_id = db.Column(db.Integer, db.ForeignKey('movie.id'), nullable=False, comment='电影Id，关联movie')
     rank = db.Column(db.Integer, nullable=False, comment='电影历史排名')
     score = db.Column(db.Float(4), nullable=False, server_default=db.text("'0.00'"), comment='电影历史评分')
@@ -65,7 +65,7 @@ class ChartHistory(db.Model):
                            server_default=db.text("CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"),
                            comment='更新时间')
 
-    # chart = db.relationship("Chart", back_populates="histories")
+    chart = db.relationship("Chart", back_populates="histories")
     movie = db.relationship("Movie", back_populates="chart_histories")
 
 
@@ -272,14 +272,14 @@ class Movie(db.Model):
     series = db.relationship("Series", secondary="movie_series", back_populates="movies")
     stars = db.relationship("Star", secondary="movie_star", back_populates="movies")
     magnets = db.relationship("Magnet", back_populates="movie")
-    # chart_entries = db.relationship("ChartEntry", back_populates="movie")
+    chart_entries = db.relationship("ChartEntry", back_populates="movie")
     chart_histories = db.relationship("ChartHistory", back_populates="movie")
 
     # 普通属性
     """
     电影信息
     """
-    ranking = None
+    rank = None
     tag = ""
     code = ""
     link = ""
@@ -449,3 +449,42 @@ class Studio(db.Model):
                            server_default=db.text("CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"),
                            comment='更新时间')
     movies = db.relationship("Movie", back_populates="studio")
+
+
+
+
+
+"""
+
+# 多对多关系表
+movie_director = db.Table('movie_director',
+    db.Column('id', Integer, primary_key=True, autoincrement=True),
+    db.Column('movie_id', Integer, ForeignKey('movie.id')),
+    db.Column('director_id', Integer, ForeignKey('director.id'))
+)
+
+movie_genre = db.Table('movie_genre',
+    db.Column('id', Integer, primary_key=True, autoincrement=True),
+    db.Column('movie_id', Integer, ForeignKey('movie.id')),
+    db.Column('genre_id', Integer, ForeignKey('genre.id'))
+)
+
+movie_label = db.Table('movie_label',
+    db.Column('id', Integer, primary_key=True, autoincrement=True),
+    db.Column('movie_id', Integer, ForeignKey('movie.id')),
+    db.Column('label_id', Integer, ForeignKey('label.id'))
+)
+
+movie_series = db.Table('movie_series',
+    db.Column('id', Integer, primary_key=True, autoincrement=True),
+     db.Column('movie_id', Integer, ForeignKey('movie.id')),
+     db.Column('series_id', Integer, ForeignKey('series.id'))
+)
+
+
+movie_star = db.Table('movie_star',
+    db.Column('id', Integer, primary_key=True, autoincrement=True),
+    db.Column('movie_id', Integer, ForeignKey('movie.id')),
+    db.Column('star_id', Integer, ForeignKey('star.id'))
+)
+"""

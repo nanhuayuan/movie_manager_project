@@ -4,7 +4,7 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 from app.model.db.movie_model import Movie
-from app.model.md_file import md_file
+from app.model.mdfileinfo import MdFileInfo
 from app.utils.read_markdown_file.top250_markdown_reader import Top250MarkdownReader
 
 

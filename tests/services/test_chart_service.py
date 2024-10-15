@@ -6,7 +6,7 @@ from unittest.mock import Mock, patch
 
 from app.model.chart_file_type_enun import ChartFileType
 from app.model.db.movie_model import Movie
-from app.model.md_file import md_file
+from app.model.mdfileinfo import MdFileInfo
 from app.services.chart_service import ChartService
 from app.utils.read_markdown_file.normal_markdown_reader import NormalMarkdownReader
 from app.utils.read_markdown_file.top250_markdown_reader import Top250MarkdownReader

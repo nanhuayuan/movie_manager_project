@@ -1,17 +1,13 @@
 import json
-from typing import Optional
 
-from app.dao.movie_dao import MovieDAO
 from app.dao.magnet_dao import MagnetDAO
-from app.model.db.movie_model import Movie
+from app.dao.movie_dao import MovieDAO
 from app.services.cache_service import CacheService
-from app.services.jellyfin_service import JellyfinService
 from app.services.everything_service import EverythingService
-from app.services.scraper_service import ScraperService
+from app.services.jellyfin_service import JellyfinService
 from app.services.qbittorrent_service import QBittorrentService
-from app.utils.db_util import db
+from app.services.scraper_service import ScraperService
 from app.utils.redis_client import RedisUtil
-import logging
 
 
 class MovieService:
@@ -29,7 +25,6 @@ class MovieService:
         self.qbittorrent_service = qbittorrent_service if qbittorrent_service is not None else QBittorrentService()
         self.redis_client = redis_client if redis_client is not None else RedisUtil()
 
-        self.logger = logging.getLogger(__name__)
         self.cache_service = cache_service if cache_service is not None else CacheService()
 
         self.cache_prefix = "movie:"  # 缓存键的前缀

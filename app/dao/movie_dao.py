@@ -6,7 +6,6 @@ from datetime import datetime
 
 from app.dao.base_dao import BaseDAO
 from app.model.db.movie_model import Movie, Director, Genre, Star, Label, Series, Studio
-#from app import db  # 假设您的 Flask-SQLAlchemy 实例在 app/__init__.py 中定义
 
 class MovieDAO(BaseDAO[Movie]):
     """
