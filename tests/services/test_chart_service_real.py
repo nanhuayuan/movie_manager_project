@@ -4,13 +4,14 @@ from flask_sqlalchemy import SQLAlchemy
 
 # 假设这是你的应用工厂函数或者获取 app 和 db 的方法
 from app.main import create_app
-from app.utils.db_util import db, get_db, init_app
+from app.utils.db_util import get_db, init_app
 
 
 @pytest.fixture(scope='session')
 def app():
     app = create_app()
     return app
+
 
 @pytest.fixture(scope='session')
 def _db(app):
@@ -43,6 +44,7 @@ def session(app, _db):
 def chart_service():
     from app.services.chart_service import ChartService
     return ChartService()
+
 
 def test_get_movie_chart_and_chary_type_default(app, session, chart_service):
     with app.app_context():
