@@ -6,8 +6,7 @@ from app.config.app_config import AppConfig
 from app.dao import ChartTypeDAO
 from app.model.chart_file_type_enun import ChartFileType
 from app.model.db.movie_model import ChartType
-from app.utils.log_util import info, error
-# 配置日志记录器
+from app.utils.log_util import debug, info, warning, error, critical
 from app.utils.read_markdown_file.markdown_reader import MarkdownReader
 
 
@@ -27,38 +26,59 @@ class ChartTypeService:
 
     def __post_init__(self):
         """初始化服务，注册默认的读取器"""
+        debug("ChartTypeService post-initialization completed")
 
     def __init__(self):
-
         self.config = AppConfig().get_md_file_path_config()
+        debug(f"Loaded configuration: {self.config}")
 
         self.chart_file_type = self.config.get('chart_file_type', ChartFileType.NORMAL)
         self.chart_type_name = self.config.get('chart_type_name', '')
         self.chart_type_description = self.config.get('chart_type_description', '')
 
         self.chart_type_dao = ChartTypeDAO()
-        self.chart_type = ChartType(name=self.chart_type_name, description=self.chart_type_description,
-                                    chart_file_type=self.chart_file_type)
+        self.chart_type = ChartType(
+            name=self.chart_type_name,
+            description=self.chart_type_description,
+            chart_file_type=self.chart_file_type
+        )
+        info(f"ChartTypeService initialized with chart_type: {self.chart_type}")
 
     def get_by_name_or_create(self, chart_type: ChartType = None) -> Optional[ChartType]:
-        info(f"Entering get_by_name_or_create with chart_type: {chart_type}")
+        """
+        根据名称获取ChartType，如果不存在则创建新的ChartType
+
+        Args:
+            chart_type (ChartType, optional): 要获取或创建的ChartType对象。如果为None，则使用默认的chart_type。
+
+        Returns:
+            Optional[ChartType]: 获取到的或新创建的ChartType对象，如果出现错误则返回None
+
+        Raises:
+            ValueError: 当输入的chart_type不是ChartType实例时抛出
+        """
+        debug(f"Entering get_by_name_or_create with chart_type: {chart_type}")
+
         if chart_type is None:
             chart_type = self.chart_type
-        info(f"Using chart_type: {chart_type}")
+            debug(f"Using default chart_type: {chart_type}")
 
         if not isinstance(chart_type, ChartType):
+            error("Invalid input: chart_type must be an instance of ChartType")
             raise ValueError("chart_type must be an instance of ChartType")
 
         try:
-            info(f"Attempting to get_by_name with: {chart_type.name}")
-            flg = self.chart_type_dao.get_by_name(chart_type.name)
-            info(f"Result of get_by_name: {flg}")
-            if flg is None:
-                info("Creating new chart_type")
-                return self.chart_type_dao.create(chart_type)
+            debug(f"Attempting to get_by_name with: {chart_type.name}")
+            existing_chart_type = self.chart_type_dao.get_by_name(chart_type.name)
+
+            if existing_chart_type is None:
+                info(f"ChartType '{chart_type.name}' not found. Creating new ChartType.")
+                new_chart_type = self.chart_type_dao.create(chart_type)
+                info(f"New ChartType created: {new_chart_type}")
+                return new_chart_type
             else:
-                info("Returning existing chart_type")
-                return flg
+                info(f"Existing ChartType found: {existing_chart_type}")
+                return existing_chart_type
         except Exception as e:
-            error(f"An error occurred: {e}")
+            critical(f"An error occurred while processing ChartType: {e}")
             return None

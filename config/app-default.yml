@@ -20,11 +20,6 @@ redis:
 
 # Jellyfin API 配置
 jellyfin:
-  #api_url: "http://qnap.nas.com:8096"
-  #api_key: "8fa1a15a2a484d6fb86167cd31b3cef2"
-  #user_id: 'b128da17dbf5412bac37c096e25f2de5'
-  #item_id: 'ab532873de6a4fcd09ca15f5d59cd55a'
-  #playlists_id: '953141ca3d64b4e0bf3ff52b29bcbbab'
   api_url: "http://127.0.0.1:8096"
   api_key: "1d4f983cf0a04522a444965fdfbfde9e" #密钥
   user_id: '5207a4b5a7bf4167ae81ba9d5f341c74' #root用户ID
@@ -71,8 +66,3 @@ app:
   name: MovieListDownloader
   environment: development  # 可选 development, production
   movie_list_file: data/movies_list/  # 本地电影榜单文件路径
-
-# 日志设置
-logging:
-  level: "INFO"
-  file: "./logs/movie_manager.log"

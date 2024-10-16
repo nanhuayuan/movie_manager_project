@@ -66,8 +66,3 @@ app:
   name: MovieListDownloader
   environment: development  # 可选 development, production
   movie_list_file: ./data/movies_list/  # 本地电影榜单文件路径
-
-# 日志设置
-logging:
-  level: "INFO"
-  file: "./logs/movie_manager.log"

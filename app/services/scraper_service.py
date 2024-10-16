@@ -1,22 +1,27 @@
 import requests
 from bs4 import BeautifulSoup
-import logging
-
 from app.config.app_config import AppConfig
 from app.services.actor_service import ActorService
+from app.services.chart_entry_service import ChartEntryService
+from app.services.chart_service import ChartService
+from app.services.chart_type_service import ChartTypeService
 from app.services.studio_service import StudioService
+from app.utils.log_util import debug, info, warning, error, critical
+
 
 
 class ScraperService:
-    def __init__(self,  actor_service: ActorService = None, studio_service: StudioService = None):
+    def __init__(self,  chart_service: ChartService = None,actor_service: ActorService = None, studio_service: StudioService = None):
         config_loader = AppConfig()
         config = config_loader.get_web_scraper_config()
         self.base_url = config['javdb_url']
 
-        self.logger = logging.getLogger(__name__)
-
         self.actor_service = actor_service  if actor_service is not None else ActorService()
         self.studio_service = studio_service  if studio_service is not None else StudioService()
+        self.chart_service = chart_service  if chart_service is not None else ChartService()
+
+        self.chart_type_service = ChartTypeService()
+        self.chart_entry_service = ChartEntryService()
 
 
     def scrape_movie_info(self, movie_id: str) -> dict:
@@ -84,7 +89,7 @@ class ScraperService:
                 'stars': stars
             }
         except Exception as e:
-            self.logger.error(f"Error scraping info for movie {movie_id}: {str(e)}")
+            self.error(f"Error scraping info for movie {movie_id}: {str(e)}")
             return {}
 
 
@@ -108,5 +113,87 @@ class ScraperService:
             magnets = [a['href'] for a in soup.find_all('a', class_='magnet-link')]
             return magnets
         except Exception as e:
-            self.logger.error(f"Error getting magnets for movie {movie_id}: {str(e)}")
+            self.error(f"Error getting magnets for movie {movie_id}: {str(e)}")
             return []
+
+
+    def aaa(self):
+        """
+        读取 md 文件并将数据保存到数据库
+        爬取内容
+        下载
+        入库
+        Returns:
+
+        """
+        """读取 md 文件并将数据保存到数据库"""
+        chart_type = self.chart_type_service.chart_type
+        reader = self.readers.get(chart_type.chart_file_type)
+        if not reader:
+            error(f"不支持的榜单类型: {chart_type.chart_file_type}")
+            raise ValueError(f"不支持的榜单类型: {chart_type.chart_file_type}")
+
+        md_file_list = reader.read_files()
+        info(f"Reading {len(md_file_list)} files to database")
+
+        for md_file in md_file_list:
+            chart = self.chart_service.md_file_to_chart(md_file)
+            for movie in md_file.movie_info_list:
+                chart_entry = self.chart_entry_service.movie_to_chart_entry(movie=movie)
+                chart_entry.movie = movie
+                chart.entries.append(chart_entry)
+
+            chart.chart_type = chart_type
+            flg = self.chart_service.create(chart)
+            info(f"Chart created: {flg}")
+
+        """
+        success_path = os.path.join(PATH, SUCCESS_FILE)
+        exclude_movie_list = read_success_file(success_path)
+
+        all_markdown_files = read_markdown_files(PATH)
+      
+        try:
+            for markdown_file in all_markdown_files:
+            
+            
+                """
+                info(f"Processing file: {markdown_file.file_name}")
+                markdown_file.need_state = 1  # 操作中
+
+                for star in markdown_file.star_info_list[:]:  # 使用切片创建副本以允许在循环中修改列表
+                    info(f"Processing star: {star.star_name}")
+
+                    title_list, href_list = search_star_from_javdb(star.star_name)
+
+                    for href in href_list:
+                        movie_info_list = get_eligible_movies(href, COOKIE, PAGE, SORT_TYPE, NUMBER_OF_EVALUATORS,
+                                                              exclude_movie_list)
+                        time.sleep(random.randint(10, 30))
+
+                        for movie_info in movie_info_list:
+                            if not movie_info['uri']:
+                                warning(f"No URI for movie: {movie_info['serial_number']}")
+                                continue
+
+                            magnet_list = get_movie_magnet(movie_info['uri'])
+                            if not magnet_list:
+                                warning(f"No magnet links for movie: {movie_info['serial_number']}")
+                                continue
+
+                            movie_info['magnet_list'] = magnet_list
+                            download_success = download_by_qbittorrent(movie_info)
+
+                            if download_success:
+                                write_success_file(success_path, f"{movie_info['serial_number']}\n")
+
+                            info("Sleeping before next download...")
+                            time.sleep(random.randint(10, 20))
+
+                    markdown_file.star_info_list.remove(star)
+                    time.sleep(random.randint(10, 30))
+
+                markdown_file.need_state = 2  # 操作完成
+
+        finally:
+            update_markdown_files(all_markdown_files)
