@@ -16,7 +16,7 @@ class TestChartDAO(unittest.TestCase):
         self.chart_dao = ChartDAO()
         self.session_mock = MagicMock()
 
-        # 创建一些测试用的图表数据
+        # 创建一些测试用的榜单数据
         self.test_charts = [
             Chart(id=1, name="Test Chart 1", description="Description 1",
                   chart_type="bar", data={"key": "value1"},
@@ -28,7 +28,7 @@ class TestChartDAO(unittest.TestCase):
 
     @patch('app.utils.db_util.DBUtil.session_scope')
     def test_get_by_name(self, mock_session_scope):
-        """测试通过名称获取图表"""
+        """测试通过名称获取榜单"""
         # 设置模拟的session行为
         mock_session = MagicMock()
         mock_session_scope.return_value.__enter__.return_value = mock_session
@@ -44,7 +44,7 @@ class TestChartDAO(unittest.TestCase):
 
     @patch('app.utils.db_util.DBUtil.session_scope')
     def test_find_by_keyword(self, mock_session_scope):
-        """测试通过关键词搜索图表"""
+        """测试通过关键词搜索榜单"""
         mock_session = MagicMock()
         mock_session_scope.return_value.__enter__.return_value = mock_session
         mock_session.query.return_value.filter.return_value.all.return_value = self.test_charts
@@ -57,7 +57,7 @@ class TestChartDAO(unittest.TestCase):
 
     @patch('app.utils.db_util.DBUtil.session_scope')
     def test_get_recent_charts(self, mock_session_scope):
-        """测试获取最近的图表"""
+        """测试获取最近的榜单"""
         mock_session = MagicMock()
         mock_session_scope.return_value.__enter__.return_value = mock_session
         mock_session.query.return_value.order_by.return_value.limit.return_value.all.return_value = self.test_charts
@@ -71,7 +71,7 @@ class TestChartDAO(unittest.TestCase):
 
     @patch('app.utils.db_util.DBUtil.session_scope')
     def test_update_chart_data(self, mock_session_scope):
-        """测试更新图表数据"""
+        """测试更新榜单数据"""
         mock_session = MagicMock()
         mock_session_scope.return_value.__enter__.return_value = mock_session
         mock_session.query.return_value.filter.return_value.first.return_value = self.test_charts[0]
@@ -86,7 +86,7 @@ class TestChartDAO(unittest.TestCase):
 
     @patch('app.utils.db_util.DBUtil.session_scope')
     def test_get_charts_by_type(self, mock_session_scope):
-        """测试通过类型获取图表"""
+        """测试通过类型获取榜单"""
         mock_session = MagicMock()
         mock_session_scope.return_value.__enter__.return_value = mock_session
         mock_session.query.return_value.filter.return_value.all.return_value = [self.test_charts[0]]

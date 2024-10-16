@@ -82,3 +82,6 @@ class ChartTypeService:
         except Exception as e:
             critical(f"An error occurred while processing ChartType: {e}")
             return None
+
+    def get_current_chart_type(self):
+        return self.chart_type

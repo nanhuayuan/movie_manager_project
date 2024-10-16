@@ -45,13 +45,24 @@ web_scraper:
   timeout_seconds: 10  # 请求超时时间
   retry_attempts: 3    # 爬虫重试次数
   javdb_url: "https://javdb.com"
+  proxy_enable: True
+  proxy_url: "http://127.0.0.1:7890"
 
 # 下载工具配置 (qbittorrent)
 qbittorrent:
-  host: "localhost"
+  host: "qnap.nas.com"
   port: 8080
   username: "admin"
   password: "adminadmin"
+  max_retry_attempts: 3  # 下载失败时重试次数
+  download_folder: /path/to/download/folder  # 下载文件的保存路径
+
+# 下载工具配置 (BitComet)
+bitcomet:
+  host: "localhost"
+  port: 17049
+  username: "admin"
+  password: "123456"
   max_retry_attempts: 3  # 下载失败时重试次数
   download_folder: /path/to/download/folder  # 下载文件的保存路径
 

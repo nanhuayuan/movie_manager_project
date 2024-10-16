@@ -1,66 +1,108 @@
+import requests
 from qbittorrent import Client
-from requests.exceptions import HTTPError
+from requests.exceptions import RequestException
 import time
 import random
 
-from app.utils.http_util import HttpUtil
-from app.utils.log_util import debug, info, warning, error, critical
-class DownloadUtils:
-    def get_movie_magnet(uri):
+from app.config.app_config import AppConfig
+from app.enum.download_client_enum import DownloadClient
+from app.utils.log_util import logger
+
+
+
+class DownloadUtil:
+    def __init__(self):
+        config = AppConfig()
+        self.qb_config = config.get_qbittorrent_config()
+        self.bc_config = config.get_bitcomet_config()
+
+        self.qbittorrent_url = f"http://{self.qb_config['username']}:{self.qb_config['password']}@{self.qb_config['host']}:{self.qb_config['port']}"
+        self.bitcomet_url = f"http://{self.bc_config['username']}:{self.bc_config['password']}@{self.bc_config['host']}:{self.bc_config['port']}"
+
+        self.qb = Client(self.qbittorrent_url)
+
+    def download(self, magnet: str, client: DownloadClient = DownloadClient.QBITTORRENT) -> bool:
         """
-        获取电影的磁力链接。
+        使用指定的客户端下载电影。
 
         Args:
-            uri (str): 电影页面的URI。
-
-        Returns:
-            list: 磁力链接列表。
-        """
-        url = f'https://javdb.com{uri}'
-        info(f"Fetching magnet links for movie: {url}")
-
-        soup = HttpUtil.proxy_request(url)
-        magnets_content = soup.find('div', id='magnets-content')
-
-        if not magnets_content:
-            warning(f"No magnet links found for: {uri}")
-            return []
-
-        magnet_list = [a['href'] for a in magnets_content.find_all('a')]
-        debug(f"Found {len(magnet_list)} magnet links")
-        return magnet_list
-
-
-    def download_by_qbittorrent(movie_info, retry_count=1, max_retry_count=10):
-        """
-        使用qBittorrent下载电影。
-
-        Args:
-            movie_info (dict): 包含电影信息的字典。
-            retry_count (int, optional): 当前重试次数。默认为1。
-            max_retry_count (int, optional): 最大重试次数。默认为10。
+            magnet (str): 磁力链接。
+            client (DownloadClient): 下载客户端，默认为 QBITTORRENT。
 
         Returns:
             bool: 下载是否成功。
         """
-        if not movie_info['magnet_list']:
-            warning(f"No magnet links for movie: {movie_info['serial_number']}")
-            return False
+        logger.info(f"开始使用 {client.value} 下载: {magnet}")
 
-        magnet = movie_info['magnet_list'][0]
-        info(f"Starting download for {movie_info['serial_number']}")
+        max_retry_attempts = self.qb_config.get('max_retry_attempts', 3) if client == DownloadClient.QBITTORRENT else self.bc_config.get('max_retry_attempts', 3)
+        download_folder = self.qb_config.get('download_folder') if client == DownloadClient.QBITTORRENT else self.bc_config.get('download_folder')
 
-        while retry_count <= max_retry_count:
+        for attempt in range(1, max_retry_attempts + 1):
             try:
-                qb = Client('http://192.168.31.45:6363/', verify=False)
-                qb.login('admin', 'adminadmin')
-                qb.download_from_link(magnet)
-                info(f"Download completed for {movie_info['serial_number']}")
-                return True
-            except (Client.LoginRequired, HTTPError) as e:
-                error(f"Download failed (attempt {retry_count}/{max_retry_count}): {e}")
-                retry_count += 1
-                time.sleep(random.randint(10, 30))
+                if client == DownloadClient.QBITTORRENT:
+                    self.qb.download_from_link(magnet, savepath=download_folder)
+                elif client == DownloadClient.BITCOMET:
+                    headers = {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.159 Safari/537.36',
+                    }
+                    data = {
+                        'url': magnet,
+                        'savepath': download_folder
+                    }
+                    response = requests.post(url=self.bitcomet_url, data=data, headers=headers)
+                    response.raise_for_status()
+                else:
+                    raise ValueError(f"不支持的下载客户端: {client}")
 
-        error(f"Max retries exceeded for {movie_info['serial_number']}")
-        return False
+                logger.info(f"{client.value} 下载任务已添加: {magnet}")
+                return True
+
+            except (RequestException, ValueError) as e:
+                logger.error(f"{client.value} 下载失败 (尝试 {attempt}/{max_retry_attempts}): {e}")
+                if attempt < max_retry_attempts:
+                    time.sleep(random.randint(1, 5))
+                else:
+                    logger.error(f"达到最大重试次数，{client.value} 下载失败: {magnet}")
+                    return False
+
+    def get_download_status(self, magnet: str, client: DownloadClient = DownloadClient.QBITTORRENT) -> dict:
+        """
+        获取下载状态。
+
+        Args:
+            magnet (str): 磁力链接。
+            client (DownloadClient): 下载客户端，默认为 QBITTORRENT。
+
+        Returns:
+            dict: 包含下载状态信息的字典。
+        """
+        if client == DownloadClient.QBITTORRENT:
+            # 实现qBittorrent获取下载状态的逻辑
+            pass
+        elif client == DownloadClient.BITCOMET:
+            # 实现BitComet获取下载状态的逻辑
+            pass
+        else:
+            logger.error(f"不支持的下载客户端: {client}")
+            return {}
+
+    def remove_download(self, magnet: str, client: DownloadClient = DownloadClient.QBITTORRENT) -> bool:
+        """
+        移除下载任务。
+
+        Args:
+            magnet (str): 磁力链接。
+            client (DownloadClient): 下载客户端，默认为 QBITTORRENT。
+
+        Returns:
+            bool: 是否成功移除。
+        """
+        if client == DownloadClient.QBITTORRENT:
+            # 实现qBittorrent移除下载任务的逻辑
+            pass
+        elif client == DownloadClient.BITCOMET:
+            # 实现BitComet移除下载任务的逻辑
+            pass
+        else:
+            logger.error(f"不支持的下载客户端: {client}")
+            return False

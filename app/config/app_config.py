@@ -40,6 +40,10 @@ class AppConfig(BaseConfig):
         """返回 qbittorrent 配置"""
         return self.config['qbittorrent']
 
+    def get_bitcomet_config(self):
+        """返回 qbittorrent 配置"""
+        return self.config['bitcomet']
+
     def get_web_scraper_config(self):
         """返回爬虫配置"""
         return self.config['web_scraper']

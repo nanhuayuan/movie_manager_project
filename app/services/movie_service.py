@@ -5,14 +5,13 @@ from app.services.cache_service import CacheService
 from app.services.everything_service import EverythingService
 from app.services.jellyfin_service import JellyfinService
 from app.services.qbittorrent_service import QBittorrentService
-from app.services.scraper_service import ScraperService
 from app.utils.redis_client import RedisUtil
 from app.utils.log_util import debug, info, warning, error, critical
 
 class MovieService:
     def __init__(self, movie_dao: MovieDAO = None, magnet_dao: MagnetDAO = None,
                  jellyfin_service: JellyfinService = None, everything_service: EverythingService = None,
-                 scraper_service: ScraperService = None, qbittorrent_service: QBittorrentService = None,
+                 qbittorrent_service: QBittorrentService = None,
                  redis_client: RedisUtil = None, cache_service: CacheService = None):
 
         # 初始化各种服务和DAO，如果没有提供则创建默认实例
@@ -20,7 +19,7 @@ class MovieService:
         self.magnet_dao = magnet_dao if magnet_dao is not None else MagnetDAO()
         self.jellyfin_service = jellyfin_service if jellyfin_service is not None else JellyfinService()
         self.everything_service = everything_service if everything_service is not None else EverythingService()
-        self.scraper_service = scraper_service if scraper_service is not None else ScraperService()
+        #self.scraper_service = scraper_service if scraper_service is not None else ScraperService()
         self.qbittorrent_service = qbittorrent_service if qbittorrent_service is not None else QBittorrentService()
         self.redis_client = redis_client if redis_client is not None else RedisUtil()
         self.cache_service = cache_service if cache_service is not None else CacheService()

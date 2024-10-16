@@ -44,7 +44,7 @@ class TestChartTypeDAO:
         assert chart_type.name == "柱状图"
 
         # 测试获取不存在的数据
-        non_existent = dao.get_by_name("不存在的图表")
+        non_existent = dao.get_by_name("不存在的榜单")
         assert non_existent is None
 
     def test_get_all_active(self, dao, setup_database):
@@ -79,7 +79,7 @@ class TestChartTypeDAO:
         assert non_existent is None
 
     def test_partial_update(self, dao, setup_database):
-        chart_type = dao.create(name="测试图表", description="测试描述")
+        chart_type = dao.create(name="测试榜单", description="测试描述")
 
         # 只更新名称
         updated = dao.update(chart_type_id=chart_type.id, name="新名称")

@@ -84,7 +84,7 @@ class Top250MarkdownReader(MarkdownReader):
         else:
             uri_match = self.URI_PATTERN.search(line)
             if uri_match and current_movie:
-                current_movie.uri = uri_match.group(1)
+                current_movie.link = uri_match.group(1)
                 md_file_obj.movie_info_list.append(current_movie)
                 current_movie = None
         return current_movie

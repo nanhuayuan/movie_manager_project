@@ -167,3 +167,10 @@ class ChartService:
 
     def create(self, chart: Chart):
         return self.chart_dao.create(chart)
+
+    def get_reader(self, chart_file_type: str ):
+        reader = self.readers.get(chart_file_type)
+        if not reader:
+            error(f"不支持的榜单类型: {chart_file_type}")
+            raise ValueError(f"不支持的榜单类型: {chart_file_type}")
+        return reader
