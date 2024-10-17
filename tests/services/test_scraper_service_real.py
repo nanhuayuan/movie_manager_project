@@ -51,7 +51,7 @@ def scraper_service():
     debug("ScraperService instance created for testing")
     return service
 
-def test_processor(app, session, scraper_service):
+def test_parse_movie_details_page(app, session, scraper_service):
     with app.app_context():
         info("Starting test: processor")
         result = scraper_service.process_charts()

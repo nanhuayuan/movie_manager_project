@@ -10,7 +10,8 @@ from app.services.chart_type_service import ChartTypeService
 from app.services.studio_service import StudioService
 from app.utils.http_util import HttpUtil
 from app.utils.page_parser_util import PageParserUtil
-from app.utils.log_util import logger
+from app.utils.log_util import debug, info, warning, error, critical
+from app.utils.parser.parser_factory import ParserFactory
 
 
 class ScraperService:
@@ -34,7 +35,7 @@ class ScraperService:
         reader = self.chart_service.get_reader(chart_type.chart_file_type)
 
         md_file_list = reader.read_files()
-        logger.info(f"读取了 {len(md_file_list)} 个文件")
+        info(f"读取了 {len(md_file_list)} 个文件")
 
         for md_file in md_file_list:
             self._process_chart(md_file)
@@ -54,7 +55,7 @@ class ScraperService:
 
         chart.chart_type = self.chart_type_service.get_current_chart_type()
         success = self.chart_service.create(chart)
-        logger.info(f"榜单创建{'成功' if success else '失败'}")
+        info(f"榜单创建{'成功' if success else '失败'}")
 
     def _get_movie_info(self, movie: Movie) -> Optional[dict]:
         """获取电影详细信息。"""
@@ -62,10 +63,10 @@ class ScraperService:
         soup = self.http_util.request(url=url, proxy_enable=self.config["proxy_enable"])
 
         if not soup:
-            logger.warning(f"无法获取电影页面: {url}")
+            warning(f"无法获取电影页面: {url}")
             return None
 
-        return self.page_parser.extract_movie_info(soup)
+        return self.extract_movie_details_page(soup)
 
     def _get_movie_page_url(self, movie: Movie) -> str:
         """获取电影详情页URL。"""
@@ -81,10 +82,10 @@ class ScraperService:
         soup = self.http_util.request(url=search_url, proxy_enable=self.config["proxy_enable"])
 
         if not soup:
-            logger.warning(f"无法获取搜索页面: {search_url}")
+            warning(f"无法获取搜索页面: {search_url}")
             return None
 
-        return self.page_parser.extract_movie_page_uri(soup)
+        return self.extract_movie_page_uri(soup)
 
     def _update_database(self, movie_info: dict):
         """更新数据库中的电影信息。"""
@@ -101,7 +102,7 @@ class ScraperService:
         # 注意：这里假设你有一个 movie_service 来处理电影信息的更新
         # self.movie_service.update_movie(movie_info)
 
-        logger.info(f"已更新数据库中的电影信息: {movie_info['javdb_id']}")
+        info(f"已更新数据库中的电影信息: {movie_info['javdb_id']}")
         
     def _is_movie_in_database(self, movie: Movie) -> bool:
         """检查电影是否在数据库中。"""
@@ -145,7 +146,7 @@ class ScraperService:
             first_movie = movie_list.find('a')
             return first_movie['href'] if first_movie else None
         except Exception as e:
-            logger.error(f"提取电影页面URI时出错: {str(e)}")
+            error(f"提取电影页面URI时出错: {str(e)}")
             return None
 
     def _extract_movie_info(self, soup: BeautifulSoup) -> dict:
@@ -169,3 +170,23 @@ class ScraperService:
         """更新榜单条目的下载状态。"""
         # 实现更新逻辑
         pass
+
+    def extract_movie_page_uri(self, soup):
+
+        # 使用特定解析器
+        parser = ParserFactory.get_parser()
+        search_result_list = parser.parse_search_results(soup)
+
+        info(search_result_list)
+
+        if search_result_list:
+            return search_result_list[0].uri
+        else:
+            raise ValueError("无法找到匹配的URI")
+
+    def extract_movie_details_page(self, soup):
+        # 使用特定解析器
+        parser = ParserFactory.get_parser()
+        movie_info = parser.parse_movie_details_page(soup)
+
+        return movie_info
