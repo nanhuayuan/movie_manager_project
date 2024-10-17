@@ -4,7 +4,7 @@ from unittest.mock import patch, MagicMock
 from datetime import datetime
 
 from app.dao.movie_dao import MovieDAO
-from app.model.db.movie_model import Movie, Director, Genre, Label, Series, Star, Studio
+from app.model.db.movie_model import Movie, Director, Genre, Label, Series, Actor, Studio
 
 
 class TestMovieDAO(unittest.TestCase):

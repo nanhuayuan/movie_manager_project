@@ -61,4 +61,4 @@ class HttpUtil:
                 time.sleep(random.randint(1, 5))
 
         error(f"达到最大重试次数 ({max_retry_count})，URL: {url}")
-        return None
+        raise Exception(f"请求失败，URL: {url}")

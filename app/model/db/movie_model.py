@@ -270,7 +270,7 @@ class Movie(db.Model):
     genres = db.relationship("Genre", secondary="movie_genre", back_populates="movies")
     labels = db.relationship("Label", secondary="movie_label", back_populates="movies")
     series = db.relationship("Series", secondary="movie_series", back_populates="movies")
-    stars = db.relationship("Star", secondary="movie_star", back_populates="movies")
+    actors = db.relationship("actor", secondary="movie_actor", back_populates="movies")
     magnets = db.relationship("Magnet", back_populates="movie")
     chart_entries = db.relationship("ChartEntry", back_populates="movie")
     chart_histories = db.relationship("ChartHistory", back_populates="movie")
@@ -284,7 +284,7 @@ class Movie(db.Model):
     code = ""
     link = ""
     uri = ""
-    star_list = []
+    actor_list = []
     magnet_list = []
 
     # 排序
@@ -351,13 +351,13 @@ class MovieSery(db.Model):
                            comment='更新时间')
 
 
-class MovieStar(db.Model):
-    __tablename__ = 'movie_star'
+class MovieActor(db.Model):
+    __tablename__ = 'movie_actor'
     __table_args__ = {'comment': '电影与演员的关联表'}
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True, comment='自增主键Id')
     movie_id = db.Column(db.Integer, db.ForeignKey('movie.id'), nullable=False, comment='电影Id')
-    star_id = db.Column(db.Integer, db.ForeignKey('star.id'), nullable=False, comment='演员Id')
+    actor_id = db.Column(db.Integer, db.ForeignKey('actor.id'), nullable=False, comment='演员Id')
     created_at = db.Column(db.DateTime, nullable=False, server_default=db.text("CURRENT_TIMESTAMP"), comment='创建时间')
     updated_at = db.Column(db.DateTime, nullable=False,
                            server_default=db.text("CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"),
@@ -390,8 +390,8 @@ class Series(db.Model):
     movies = db.relationship("Movie", secondary="movie_series", back_populates="series")
 
 
-class Star(db.Model):
-    __tablename__ = 'star'
+class Actor(db.Model):
+    __tablename__ = 'actor'
     __table_args__ = {'comment': '演员信息表'}
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True, comment='自增主键Id')
@@ -406,7 +406,18 @@ class Star(db.Model):
                           comment='javlib的id')
     avmoo_id = db.Column(db.String(64, 'utf8mb4_unicode_ci'), nullable=False, server_default=db.text("''"),
                          comment='avmoo的id')
-    dmm_id = db.Column(db.String(64, 'utf8mb4_unicode_ci'), nullable=False, server_default=db.text("''"), comment='dmm的id')
+    dmm_id = db.Column(db.String(64, 'utf8mb4_unicode_ci'), nullable=False, server_default=db.text("''"),
+                       comment='dmm的id')
+    javbus_domain = db.Column(db.String(64, 'utf8mb4_unicode_ci'), nullable=False, server_default=db.text("''"),
+                          comment='javbus的演员首页')
+    javdb_domain = db.Column(db.String(64, 'utf8mb4_unicode_ci'), nullable=False, server_default=db.text("''"),
+                         comment='javdb的演员首页')
+    javlib_domain = db.Column(db.String(64, 'utf8mb4_unicode_ci'), nullable=False, server_default=db.text("''"),
+                          comment='javlib的演员首页')
+    avmoo_domain = db.Column(db.String(64, 'utf8mb4_unicode_ci'), nullable=False, server_default=db.text("''"),
+                         comment='avmoo的演员首页')
+    dmm_domain = db.Column(db.String(64, 'utf8mb4_unicode_ci'), nullable=False, server_default=db.text("''"),
+                       comment='dmm的演员首页')
     birthday = db.Column(db.Date, nullable=False, server_default=db.text("'1970-01-01'"), comment='生日')
     age = db.Column(db.Integer, nullable=False, server_default=db.text("'0'"), comment='年龄')
     cupsize = db.Column(db.String(8, 'utf8mb4_unicode_ci'), nullable=False, server_default=db.text("''"), comment='罩杯尺寸')
@@ -423,7 +434,7 @@ class Star(db.Model):
                            server_default=db.text("CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"),
                            comment='更新时间')
 
-    movies = db.relationship("Movie", secondary="movie_star", back_populates="stars")
+    movies = db.relationship("Movie", secondary="movie_actor", back_populates="actors")
 
 
 class Studio(db.Model):
@@ -482,9 +493,9 @@ movie_series = db.Table('movie_series',
 )
 
 
-movie_star = db.Table('movie_star',
+movie_actor = db.Table('movie_actor',
     db.Column('id', Integer, primary_key=True, autoincrement=True),
     db.Column('movie_id', Integer, ForeignKey('movie.id')),
-    db.Column('star_id', Integer, ForeignKey('star.id'))
+    db.Column('actor_id', Integer, ForeignKey('actor.id'))
 )
 """

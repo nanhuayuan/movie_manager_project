@@ -124,7 +124,7 @@ class ScraperService:
         """获取电影详细信息。"""
         url = self._get_movie_page_url(movie)
         soup = self.http_util.request(url=url, proxy_enable=self.config["proxy_enable"])
-        return self._extract_movie_info(soup)
+        return self.extract_movie_details_page(soup)
 
     def _get_movie_page_url(self, movie: Movie) -> str:
         """获取电影详情页URL。"""
@@ -137,7 +137,8 @@ class ScraperService:
         """搜索电影并获取URI。"""
         search_url = f'{self.config["javdb_url"]}/search?q={serial_number}&f=all'
         soup = self.http_util.request(url=search_url, proxy_enable=self.config["proxy_enable"])
-        return self._extract_movie_page_uri(soup)
+        #return self._extract_movie_page_uri(soup)
+        return self.extract_movie_page_uri(soup)
 
     def _extract_movie_page_uri(self, soup: BeautifulSoup) -> Optional[str]:
         """从搜索结果中提取电影页面URI。"""
@@ -149,10 +150,6 @@ class ScraperService:
             error(f"提取电影页面URI时出错: {str(e)}")
             return None
 
-    def _extract_movie_info(self, soup: BeautifulSoup) -> dict:
-        """从电影详情页提取电影信息。"""
-        # 实现提取逻辑
-        pass
 
     def _get_movie_magnets(self, movie_info: dict) -> List[str]:
         """获取电影的磁力链接。"""
@@ -171,7 +168,7 @@ class ScraperService:
         # 实现更新逻辑
         pass
 
-    def extract_movie_page_uri(self, soup):
+    def extract_movie_page_uri(self, soup: BeautifulSoup):
 
         # 使用特定解析器
         parser = ParserFactory.get_parser()
@@ -185,6 +182,8 @@ class ScraperService:
             raise ValueError("无法找到匹配的URI")
 
     def extract_movie_details_page(self, soup):
+        """从电影详情页提取电影信息。"""
+
         # 使用特定解析器
         parser = ParserFactory.get_parser()
         movie_info = parser.parse_movie_details_page(soup)
