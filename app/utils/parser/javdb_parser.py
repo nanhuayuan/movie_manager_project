@@ -1,17 +1,21 @@
-from datetime import datetime
-from typing import List, Tuple
-from bs4 import BeautifulSoup
 import re
+from datetime import datetime
+from typing import List, Tuple, Optional
 
-from app.model.db.movie_model import Movie, Director, Actor, Series, Genre, Label, Studio, Magnet
+from bs4 import BeautifulSoup
+
+from app.model.db.movie_model import Movie, Director, Actor, Series, Genre, Studio, Magnet
+from app.utils.log_util import debug, info, warning, error
 from app.utils.parser.base_movie_parser import BaseMovieParser, ParserError
 from app.utils.parser.model.movie_search_result import MovieSearchResult
 from app.utils.parser.parser_factory import ParserFactory
-from app.utils.log_util import debug, info, warning, error, critical
+
 
 @ParserFactory.register('javdb')
 class JavdbParser(BaseMovieParser):
     """JavDB网站解析器"""
+
+    #------------------------------- parse_movie_details_page ----start----------------------
 
     def parse_movie_details_page(self, soup: BeautifulSoup) -> Movie:
         """
@@ -27,171 +31,294 @@ class JavdbParser(BaseMovieParser):
             raise ParserError(f"Failed to parse movie details: {e}")
 
     def _parse_movie_details(self, soup: BeautifulSoup) -> Movie:
-        movie = Movie()
+        """
+        解析电影详细信息
+        Args:
+            soup: BeautifulSoup对象,包含页面HTML内容
+        Returns:
+            Movie: 解析后的电影对象
+        """
+        try:
+            debug("开始解析电影详情")
+            movie = Movie()
 
-        # 解析面板信息
-        panel_blocks = soup.select('.movie-panel-info .panel-block')
-        for block in panel_blocks:
+            # 解析标题信息
+            title_elem = soup.select_one('.title.is-4')
+            if title_elem:
+                # 获取番号和标题
+                title_parts = [text.strip() for text in title_elem.stripped_strings]
+                if len(title_parts) >= 2:
+                    movie.serial_number = title_parts[0]
+                    movie.title = title_parts[1]
+                    debug(f"解析到番号:{movie.serial_number}, 标题:{movie.title}")
+
+            # 解析面板信息
+            panel_blocks = soup.select('.movie-panel-info .panel-block')
+            for block in panel_blocks:
+                self._parse_panel_block(block, movie)
+
+            # 解析演员信息
+            self._parse_actors(soup, movie)
+
+            # 解析导演信息
+            self._parse_directors(soup, movie)
+
+            # 解析类别信息
+            self._parse_genres(soup, movie)
+
+            # 解析系列信息
+            self._parse_series(soup, movie)
+
+            # 解析制作商信息
+            self._parse_studio(soup, movie)
+
+            # 解析用户统计信息
+            self._parse_user_stats(soup, movie)
+
+            # 解析磁力链接
+            self._parse_magnets(soup, movie)
+
+            info(f"电影 {movie.serial_number} 解析完成")
+            return movie
+
+        except Exception as e:
+            error(f"解析电影详情出错: {str(e)}")
+            raise ParserError(f"解析电影详情失败: {str(e)}")
+
+    def _parse_panel_block(self, block: BeautifulSoup, movie: Movie):
+        """解析面板块信息"""
+        try:
             label = self._safe_extract_text(block.select_one('strong'))
             value = self._safe_extract_text(block.select_one('.value'))
 
             if '番號' in label:
-                #movie.serial_number = value.split('-')[1] if '-' in value else value
                 movie.serial_number = value
-                #movie.javdb_id = value
+                movie.censored_id = value
+                debug(f"解析番号: {value}")
             elif '日期' in label:
                 movie.release_date = self._safe_extract_date(value)
+                debug(f"解析发行日期: {value}")
             elif '時長' in label:
                 movie.length = self._safe_extract_int(value)
-            elif '導演' in label:
-                pass  # 需要额外表存储
-            elif '片商' in label:
-                pass  # 需要额外表存储
+                debug(f"解析时长: {value}")
             elif '評分' in label:
-                score_match = re.search(r'(\d+\.?\d*)分', value)
-                if score_match:
-                    movie.score = float(score_match.group(1))
-                users_match = re.search(r'由(\d+)人評價', value)
-                if users_match:
-                    movie.userswatched = int(users_match.group(1))
+                self._parse_score(value, movie)
+                debug(f"解析评分: {value}")
 
-        # 解析用户统计信息
-        stats = soup.select_one('.video-meta-panel .is-size-7')
-        if stats:
-            stats_text = self._safe_extract_text(stats)
-            wanted_match = re.search(r'(\d+)人想看', stats_text)
-            watched_match = re.search(r'(\d+)人看過', stats_text)
-            if wanted_match:
-                movie.userswanted = int(wanted_match.group(1))
-            if watched_match:
-                movie.userswatched = int(watched_match.group(1))
-
-
-
-
-        # 解析磁力链接信息
-        magnets = soup.select('.magnet-links .item')
-        if magnets:
-            movie.have_mg = 1
-            for magnet in magnets:
-                # 检查是否有高清版本
-                if magnet.select_one('.tag.is-primary'):
-                    movie.have_hd = 1
-                # 检查是否有字幕
-                if magnet.select_one('.tag.is-warning'):
-                    movie.have_sub = 1
-                # 获取最早的磁力日期
-                date_text = self._safe_extract_text(magnet.select_one('.date .time'))
-                if date_text:
-                    # 更新电影的磁力链接日期,使用一个比较逻辑来确保保存最新的日期
-                    self.update_magnet_date(movie=movie, date_text=date_text)
-
-
-        # 待验证
-        movies = []
-
-        try:
-            video_detail = soup.find('div', class_='video-detail')
-            if not video_detail:
-                warning("未找到电影详情信息，可能页面结构发生了变化。")
-                return movies
-
-            # 提取电影代码和标题
-            code_element = video_detail.find('h2', class_='title')
-            code = code_element.find('strong').get_text(strip=True)
-            title = code_element.find('strong', class_='current-title').get_text(strip=True).replace(code, "").strip()
-            debug(f"解析到的电影代码: {code}, 标题: {title}")
-
-            # 提取其他电影详细信息
-            release_date = video_detail.find('div', string='日期:').find_next('span', class_='value').get_text(strip=True)
-            debug(f"电影发布日期: {release_date}")
-
-            score_info = video_detail.find('div', string='評分:').find_next('span', class_='value').get_text(strip=True)
-            score_match = re.search(r'([\d.]+)分', score_info)
-            score = float(score_match.group(1)) if score_match else 0.0
-            vote_count_match = re.search(r'由(\d+)人評價', score_info)
-            vote_count = int(vote_count_match.group(1)) if vote_count_match else 0
-            debug(f"评分: {score}, 投票数: {vote_count}")
-
-            has_subtitles = '字幕' in video_detail.get_text()
-            can_play = '播放' in video_detail.get_text()
-            cover_url = video_detail.find('img', class_='video-cover')['src']
-
-            # 提取导演信息
-            directors = [
-                Director(name=tag.get_text(strip=True))
-                for tag in video_detail.find('div', string='導演:').find_next('span', class_='value').find_all('a')
-            ]
-            debug(f"导演: {[director.name for director in directors]}")
-
-            # 提取演员信息
-            actors = [
-                Actor(name=tag.get_text(strip=True), gender=tag.find_next('strong').get_text(strip=True))
-                for tag in video_detail.find('div', string='演員:').find_next('span', class_='value').find_all('a')
-            ]
-            debug(f"演员: {[actor.name for actor in actors]}")
-
-            # 提取系列、类型和标签
-            series = [Series(name=tag.get_text(strip=True)) for tag in
-                      video_detail.find('div', string='系列:').find_next('span', class_='value').find_all('a')]
-            genres = [Genre(name=tag.get_text(strip=True)) for tag in
-                      video_detail.find('div', string='類別:').find_next('span', class_='value').find_all('a')]
-            labels = [Label(name=tag.get_text(strip=True)) for tag in
-                      video_detail.find('div', string='類別:').find_next('span', class_='value').find_all('a')]
-
-            # 提取制作公司
-            studio_name = video_detail.find('div', string='片商:').find_next('span', class_='value').get_text(strip=True)
-            studio = Studio(name=studio_name)
-            debug(f"制作公司: {studio_name}")
-
-            # 提取磁力链接
-            magnets = []
-            for magnet_div in soup.find_all('div', class_='item'):
-                magnet_name = magnet_div.find('span', class_='name').get_text(strip=True)
-                magnet_url = magnet_div.find('a')['href']
-                magnet_size = magnet_div.find('span', class_='meta').get_text(strip=True)
-                magnet_date = magnet_div.find('div', class_='date').find('span', class_='time').get_text(strip=True)
-                magnets.append(Magnet(url=magnet_url, name=magnet_name, size=magnet_size, date=magnet_date))
-            debug(f"磁力链接数量: {len(magnets)}")
         except Exception as e:
-            logger.error(f"解析电影信息时发生错误: {e}")
+            warning(f"解析面板块出错: {str(e)}")
 
-        return movie
+    def _parse_score(self, value: str, movie: Movie):
+        """解析评分信息"""
+        try:
+            score_match = re.search(r'(\d+\.?\d*)分', value)
+            if score_match:
+                movie.score = float(score_match.group(1))
 
-    def update_magnet_date(self, movie, date_text):
+            users_match = re.search(r'由(\d+)人評價', value)
+            if users_match:
+                movie.userswatched = int(users_match.group(1))
+        except Exception as e:
+            warning(f"解析评分出错: {str(e)}")
+
+    def _parse_actors(self, soup: BeautifulSoup, movie: Movie):
+        """解析演员信息"""
+        try:
+            actors_block = soup.select_one('.panel-block:contains("演員")')
+            if actors_block:
+                actor_links = actors_block.select('a')
+                for actor_link in actor_links:
+                    actor = Actor()
+                    actor.name = actor_link.text.strip()
+                    actor.javdb_domain = actor_link.get('href', '')
+                    movie.actors.append(actor)
+                    debug(f"解析演员: {actor.name}")
+        except Exception as e:
+            warning(f"解析演员信息出错: {str(e)}")
+
+    def _parse_directors(self, soup: BeautifulSoup, movie: Movie):
+        """解析导演信息"""
+        try:
+            directors_block = soup.select_one('.panel-block:contains("導演")')
+            if directors_block:
+                director_links = directors_block.select('a')
+                for director_link in director_links:
+                    director = Director()
+                    director.name = director_link.text.strip()
+                    movie.directors.append(director)
+                    debug(f"解析导演: {director.name}")
+        except Exception as e:
+            warning(f"解析导演信息出错: {str(e)}")
+
+    def _parse_genres(self, soup: BeautifulSoup, movie: Movie):
+        """解析类别信息"""
+        try:
+            genres_block = soup.select_one('.panel-block:contains("類別")')
+            if genres_block:
+                genre_links = genres_block.select('a')
+                for genre_link in genre_links:
+                    genre = Genre()
+                    genre.name = genre_link.text.strip()
+                    movie.genres.append(genre)
+                    debug(f"解析类别: {genre.name}")
+        except Exception as e:
+            warning(f"解析类别信息出错: {str(e)}")
+
+    def _parse_series(self, soup: BeautifulSoup, movie: Movie):
+        """解析系列信息"""
+        try:
+            series_block = soup.select_one('.panel-block:contains("系列")')
+            if series_block:
+                series_links = series_block.select('a')
+                for series_link in series_links:
+                    series = Series()
+                    series.name = series_link.text.strip()
+                    movie.series.append(series)
+                    debug(f"解析系列: {series.name}")
+        except Exception as e:
+            warning(f"解析系列信息出错: {str(e)}")
+
+    def _parse_studio(self, soup: BeautifulSoup, movie: Movie):
+        """解析制作商信息"""
+        try:
+            studio_block = soup.select_one('.panel-block:contains("片商")')
+            if studio_block:
+                studio_link = studio_block.select_one('a')
+                if studio_link:
+                    studio = Studio()
+                    studio.name = studio_link.text.strip()
+                    movie.studio = studio
+                    debug(f"解析制作商: {studio.name}")
+        except Exception as e:
+            warning(f"解析制作商信息出错: {str(e)}")
+
+    def _parse_user_stats(self, soup: BeautifulSoup, movie: Movie):
+        """解析用户统计信息"""
+        try:
+            stats = soup.select_one('.video-meta-panel .is-size-7')
+            if stats:
+                stats_text = self._safe_extract_text(stats)
+                wanted_match = re.search(r'(\d+)人想看', stats_text)
+                watched_match = re.search(r'(\d+)人看過', stats_text)
+                if wanted_match:
+                    movie.userswanted = int(wanted_match.group(1))
+                if watched_match:
+                    movie.userswatched = int(watched_match.group(1))
+                debug(f"解析用户统计 - 想看:{movie.userswanted}, 看过:{movie.userswatched}")
+        except Exception as e:
+            warning(f"解析用户统计信息出错: {str(e)}")
+
+    def _parse_magnets(self, soup: BeautifulSoup, movie: Movie):
+        """解析磁力链接信息"""
+        try:
+            magnets = soup.select('.magnet-links .item')
+            if magnets:
+                movie.have_mg = 1
+                for magnet in magnets:
+                    magnet_obj = self._parse_single_magnet(magnet)
+                    if magnet_obj:
+                        movie.magnets.append(magnet_obj)
+                        # 更新电影的HD和字幕状态
+                        if magnet_obj.have_hd:
+                            movie.have_hd = 1
+                        if magnet_obj.have_sub:
+                            movie.have_sub = 1
+                        # 更新最早的磁力日期
+                        if magnet_obj.date:
+                            self.update_magnet_date(movie, magnet_obj.date.strftime('%Y-%m-%d'))
+                debug(f"解析到 {len(movie.magnets)} 个磁力链接")
+        except Exception as e:
+            warning(f"解析磁力链接信息出错: {str(e)}")
+
+    def _parse_single_magnet(self, magnet_elem: BeautifulSoup) -> Optional[Magnet]:
+        """解析单个磁力链接"""
+        try:
+            magnet = Magnet()
+
+            # 解析名称和大小
+            name_elem = magnet_elem.select_one('.magnet-name a')
+            if name_elem:
+                magnet.name = name_elem.select_one('.name').text.strip()
+                size_text = name_elem.select_one('.meta').text.strip()
+                size_match = re.search(r'([\d.]+)([GMK]B)', size_text)
+                if size_match:
+                    size_num = float(size_match.group(1))
+                    size_unit = size_match.group(2)
+                    # 转换为字节
+                    unit_multipliers = {'GB': 1024*1024*1024, 'MB': 1024*1024, 'KB': 1024}
+                    magnet.size = int(size_num * unit_multipliers.get(size_unit, 1))
+
+            # 解析磁力链接
+            magnet_link = magnet_elem.select_one('a')['href']
+            if magnet_link.startswith('magnet:?xt='):
+                magnet.magnet_xt = magnet_link.split('btih:')[1].split('&')[0]
+
+            # 检查是否高清
+            if magnet_elem.select_one('.tag.is-primary'):
+                magnet.have_hd = 1
+
+            # 检查是否有字幕
+            if magnet_elem.select_one('.tag.is-warning'):
+                magnet.have_sub = 1
+
+            # 解析日期
+            date_elem = magnet_elem.select_one('.date .time')
+            if date_elem:
+                magnet.date = datetime.strptime(date_elem.text.strip(), '%Y-%m-%d')
+
+            # 设置来源为javdb
+            magnet._from = 1
+
+            return magnet
+        except Exception as e:
+            warning(f"解析单个磁力链接出错: {str(e)}")
+            return None
+
+    def update_magnet_date(self, movie: Movie, date_text: str) -> bool:
         """
         更新电影磁力链接的日期
         Args:
             movie: Movie对象
             date_text: 日期文本(格式:'YYYY-MM-DD')
+        Returns:
+            bool: 更新是否成功
         """
-
-        if not self.is_valid_date_format(date_text):
-            return False
         try:
-            # 解析日期文本
-            magnet_date = datetime.strptime(date_text, '%Y-%m-%d')
+            if not self.is_valid_date_format(date_text):
+                warning(f"无效的日期格式: {date_text}")
+                return False
 
-            # 如果当前没有日期,或日期是默认值,或新日期更早
+            magnet_date = datetime.strptime(date_text, '%Y-%m-%d')
             if (movie.magnet_date is None or
-                    movie.magnet_date == datetime(1970, 1, 1) or
-                    (magnet_date is not None and magnet_date < movie.magnet_date)):
+                movie.magnet_date == datetime(1970, 1, 1) or
+                (magnet_date is not None and magnet_date < movie.magnet_date)):
                 movie.magnet_date = magnet_date
+                debug(f"更新磁力日期为: {date_text}")
+                return True
 
         except ValueError as e:
-            # 处理日期解析错误
-            print(f"Error parsing date '{date_text}': {e}")
+            error(f"日期解析错误 '{date_text}': {str(e)}")
             return False
 
         return True
 
-    def is_valid_date_format(self, date_text):
+    def is_valid_date_format(self, date_text: str) -> bool:
+        """
+        验证日期格式是否有效
+        Args:
+            date_text: 日期文本
+        Returns:
+            bool: 是否为有效日期格式
+        """
         try:
             datetime.strptime(date_text, '%Y-%m-%d')
             return True
         except ValueError:
             return False
+    #------------------------------- parse_movie_details_page ----end----------------------
 
+
+    #------------------------------- Search Results ----start----------------------
     def parse_search_results(self, soup: BeautifulSoup) -> List[MovieSearchResult]:
         """
         解析搜索结果页面
@@ -327,3 +454,5 @@ class JavdbParser(BaseMovieParser):
             # 捕获异常并记录错误信息
             error(f"提取电影代码和标题时出现错误: {e}")
             return "", ""
+
+    #------------------------------- Search Results ----end----------------------
