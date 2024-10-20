@@ -1,9 +1,16 @@
-import logging
+from dataclasses import dataclass
+from typing import Optional
 
 from app.dao import StudioDAO
+from app.model.db.movie_model import Studio, Movie
+from app.model.enums import DownloadStatus
+from app.services.base_service import BaseService
+from app.utils.log_util import debug, info, warning, error, critical
 
 
-class StudioService:
-    def __init__(self, studio_dao: StudioDAO = None):
-        self.studio_dao = studio_dao if studio_dao is not None else StudioDAO()
-        self.logger = logging.getLogger(__name__)
+@dataclass
+class StudioService(BaseService[Studio, StudioDAO]):
+    def __init__(self):
+        super().__init__()
+        info("StudioService initialized")
+

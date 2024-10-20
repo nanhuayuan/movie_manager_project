@@ -21,12 +21,12 @@ class MarkdownReader(ABC):
         self.exclude_files = {"success.md"}
         self._cache = {}
         self._cache_lock = threading.Lock()
-        self.config = AppConfig().get_md_file_path_config()
+        self.config = AppConfig().get_chart_config()
 
     def get_base_path(self, base_path: Path) -> List[MdFileInfo]:
 
         if base_path is None:
-            return Path(Path(__file__).parent.parent.parent.parent / self.config['movie_list_path'])
+            return Path(Path(__file__).parent.parent.parent.parent / self.config['chart_list_path'])
 
         return base_path
 

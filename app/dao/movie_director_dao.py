@@ -4,7 +4,7 @@ from app.model.db.movie_model import MovieDirector
 
 class MovieDirectorDAO(BaseDAO[MovieDirector]):
     def __init__(self):
-        super().__init__(MovieDirector)
+        super().__init__()
 
     def get_by_movie_and_director(self, movie_id: int, director_id: int) -> MovieDirector:
         return db.session.query(MovieDirector).filter(

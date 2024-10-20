@@ -37,13 +37,7 @@ class RedisUtil:
 
         return cls._instance
 
-    def set_value(self, key, value, expiration=None):
-        """设置键值对到 Redis，支持可选过期时间"""
-        if isinstance(value, dict):
-            value = json.dumps(value)
-        self.redis.set(key, value, ex=expiration)
-
-    def get_value(self, key):
+    def get(self, key):
         """从 Redis 获取键对应的值"""
         value = self.redis.get(key)
         try:
@@ -51,10 +45,25 @@ class RedisUtil:
         except (TypeError, json.JSONDecodeError):
             return value
 
-    def delete_key(self, key):
+    def set(self, key, value, expiration=None):
+        """设置键值对到 Redis，支持可选过期时间"""
+        if isinstance(value, dict):
+            value = json.dumps(value)
+        self.redis.set(key, value, ex=expiration)
+
+
+
+    def delete(self, key):
         """从 Redis 删除一个键"""
         self.redis.delete(key)
 
-    def key_exists(self, key):
+    def exists(self, key):
         """检查键是否存在"""
         return self.redis.exists(key)
+    def add_to_set(self, set_key: str, value: str):
+        """将值添加到集合中"""
+        self.redis_client.sadd(set_key, value)
+
+    def get_set_members(self, set_key: str) -> list:
+        """获取集合中的所有成员"""
+        return [member.decode() for member in self.redis_client.smembers(set_key)]

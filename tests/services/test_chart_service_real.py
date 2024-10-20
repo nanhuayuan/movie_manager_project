@@ -54,10 +54,10 @@ def chart_service():
 def test_get_movie_chart_and_chart_type_default(app, session, chart_service):
     with app.app_context():
         info("Starting test: get_movie_chart_and_chart_type_default")
-        result = chart_service.read_file_to_db()
+        #result = chart_service.read_file_to_db()
         debug(f"read_file_to_db result: {result}")
 
-        md_file_list, chart_type = chart_service.get_movie_chart_and_chart_type()
+       #md_file_list, chart_type = chart_service.get_movie_chart_and_chart_type()
         debug(f"Retrieved {len(md_file_list)} MD files and chart type: {chart_type}")
 
         flg = chart_service.save_chart_data_to_db_and_cache(md_file_list=md_file_list, chart_type=chart_type)

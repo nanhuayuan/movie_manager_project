@@ -1,9 +1,42 @@
 import json
+import redis
+
+from app.config.app_config import AppConfig
 from app.utils.redis_client import RedisUtil
 
 class CacheService:
-    def __init__(self, redis_client: RedisUtil = None):
-        self.redis_client = redis_client if redis_client is not None else RedisUtil()
+    _instance = None
+
+    def __new__(cls):
+        """
+        该函数实现单例模式，确保类仅有一个实例。首次调用时：
+        1.通过super().__new__(cls)创建实例；
+        2.初始化DBUtil，加载数据库配置；
+        3.从配置中获取Redis数据库连接信息；
+        4.使用这些信息创建Redis客户端对象并存储在类属性_instance.client中。 之后的调用直接返回已有实例。
+        """
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+
+            """初始化DBUtil，读取数据库配置"""
+            config_loader = AppConfig()
+            redis_config = config_loader.get_redis_config()
+
+            # 从配置文件中获取数据库连接URL
+            redis_url = redis_config.get('host', '127.0.0.1')
+            port = redis_config.get('port', 6379)
+            db = redis_config.get('db', 0)
+            password = redis_config.get('password', '')
+
+            cls._instance.redis_client = redis.Redis(
+                host=redis_url,
+                port=port,
+                db=db,
+                password=password,
+                decode_responses=True
+            )
+
+        return cls._instance
 
     def get(self, key: str):
         """从缓存中获取数据"""

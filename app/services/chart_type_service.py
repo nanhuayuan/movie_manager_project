@@ -3,15 +3,16 @@ from pathlib import Path
 from typing import Dict, Optional
 
 from app.config.app_config import AppConfig
-from app.dao import ChartTypeDAO
+from app.dao import  ChartTypeDAO
 from app.model.chart_file_type_enun import ChartFileType
-from app.model.db.movie_model import ChartType
+from app.model.db.movie_model import  ChartType
+from app.services.base_service import BaseService
 from app.utils.log_util import debug, info, warning, error, critical
 from app.utils.read_markdown_file.markdown_reader import MarkdownReader
 
 
 @dataclass
-class ChartTypeService:
+class ChartTypeService(BaseService[ChartType, ChartTypeDAO]):
     """
     电影榜单分类服务类
 
@@ -29,18 +30,19 @@ class ChartTypeService:
         debug("ChartTypeService post-initialization completed")
 
     def __init__(self):
-        self.config = AppConfig().get_md_file_path_config()
+        super().__init__()
+
+        self.config = AppConfig().get_chart_type_config()
         debug(f"Loaded configuration: {self.config}")
 
-        self.chart_file_type = self.config.get('chart_file_type', ChartFileType.NORMAL)
-        self.chart_type_name = self.config.get('chart_type_name', '')
-        self.chart_type_description = self.config.get('chart_type_description', '')
+        self.name = self.config.get('name', '')
+        self.description = self.config.get('description', '')
 
         self.chart_type_dao = ChartTypeDAO()
         self.chart_type = ChartType(
-            name=self.chart_type_name,
-            description=self.chart_type_description,
-            chart_file_type=self.chart_file_type
+            name=self.name,
+            description=self.description,
+
         )
         info(f"ChartTypeService initialized with chart_type: {self.chart_type}")
 
@@ -60,7 +62,7 @@ class ChartTypeService:
         debug(f"Entering get_by_name_or_create with chart_type: {chart_type}")
 
         if chart_type is None:
-            chart_type = self.chart_type
+            chart_type = self.get_current_chart_type()
             debug(f"Using default chart_type: {chart_type}")
 
         if not isinstance(chart_type, ChartType):

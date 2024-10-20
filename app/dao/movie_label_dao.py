@@ -4,7 +4,7 @@ from app.model.db.movie_model import MovieLabel
 
 class MovieLabelDAO(BaseDAO[MovieLabel]):
     def __init__(self):
-        super().__init__(MovieLabel)
+        super().__init__()
 
     def get_by_movie_and_label(self, movie_id: int, label_id: int) -> MovieLabel:
         return db.session.query(MovieLabel).filter(

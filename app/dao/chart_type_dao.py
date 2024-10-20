@@ -19,36 +19,9 @@ class ChartTypeDAO(BaseDAO[ChartType]):
         日志记录：
         - 记录ChartTypeDAO的初始化
         """
-        super().__init__(ChartType)
+        super().__init__()
         info("ChartTypeDAO initialized")
 
-    def get_by_name(self, name: str) -> Optional[ChartType]:
-        """
-        根据名称获取榜单类型
-
-        Args:
-            name (str): 榜单类型名称
-
-        Returns:
-            Optional[ChartType]: 如果找到则返回 ChartType 对象，否则返回 None
-
-        日志记录：
-        - 记录尝试获取榜单类型的操作
-        - 记录是否成功找到榜单类型
-        - 记录可能发生的错误
-        """
-        try:
-            debug(f"Attempting to get chart type by name: {name}")
-            chart_type = self.db.session.query(ChartType).filter(ChartType.name == name).first()
-            if chart_type:
-                info(f"Chart type found: {name}")
-            else:
-                info(f"Chart type not found: {name}")
-            return chart_type
-        except Exception as e:
-            error(f"Error in get_by_name: {e}")
-            self.db.session.rollback()
-            return None
 
     def get_all_active(self) -> List[ChartType]:
         """

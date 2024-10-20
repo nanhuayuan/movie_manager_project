@@ -18,15 +18,17 @@ class DownloadStatus(IntEnum):
     """
     表示电影或资源的下载状态。
 
-    主要用于 chart_entry 表的 status 字段，表示榜单中电影的下载进度。
+    主要用于 movie 表的 download_status 字段，表示榜单中电影的下载进度。
     """
     NOT_CRAWLED = 0  # 未爬取
     CRAWLED = 1  # 已爬取相关信息，但尚未开始下载
     CRAWL_FAILED = 2  # 爬取信息失败
-    DOWNLOADING = 3  # 正在下载中
-    DOWNLOADED = 4  # 下载完成，但可能还未加入媒体库
-    IN_LIBRARY = 5  # 已加入媒体库
-    OTHER = 6  # 其他状态或特殊情况
+    DOWNLOAD_FAILED = 3  # 下载失败
+    DOWNLOADING = 4  # 正在下载中
+    DOWNLOADED = 5  # 下载完成，但可能还未加入媒体库
+    IN_LIBRARY = 6  # 已加入媒体库
+    NO_SOURCE = 7  # 资源不存在
+    OTHER = 8  # 其他状态或特殊情况
 
 
 class FavoriteStatus(IntEnum):

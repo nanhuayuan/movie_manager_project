@@ -1,0 +1,29 @@
+# logging-test.yml
+log_directory: logs/test
+
+handlers:
+  console:
+    level: DEBUG
+    formatter: detailed
+  file:
+    level: DEBUG
+    filename: test-app.log
+    backupCount: 5
+  error_file:
+    level: ERROR
+    filename: test-error.log
+    backupCount: 5
+  database:
+    level: DEBUG
+    filename: test-sql.log
+    backupCount: 3
+
+loggers:
+  root:
+    level: DEBUG
+  sqlalchemy:
+    level: DEBUG
+    propagate: True
+
+database_log:
+  console_output: DEBUG

@@ -1,10 +1,44 @@
 # coding: utf-8
+from decimal import Decimal
+
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import Column, Integer, String, Date, DateTime, Float, ForeignKey, BigInteger
 from app.utils.db_util import db
+from datetime import datetime, time, date
 
 
-class Chart(db.Model):
+class BaseModel(db.Model):
+    __abstract__ = True
+
+    def to_dict(self):
+        result = {}
+        for column in self.__table__.columns:
+            value = getattr(self, column.name)
+            # 直接使用 datetime
+            if isinstance(value, datetime):
+                value = value.strftime('%Y-%m-%d %H:%M:%S')
+            elif isinstance(value,  date):
+                value = value.strftime('%Y-%m-%d')
+            elif isinstance(value, time):  # 如果有time类型
+                value = value.strftime('%H:%M:%S')
+            elif isinstance(value, Decimal):  # 如果有Decimal类型
+                value = float(value)
+            result[column.name] = value
+        return result
+
+    @classmethod
+    def from_dict(cls, data: dict):
+        """从字典创建模型实例"""
+        if not data:
+            return None
+
+        instance = cls()
+        for key, value in data.items():
+            if hasattr(instance, key):
+                setattr(instance, key, value)
+        return instance
+
+class Chart(BaseModel):
     __tablename__ = 'chart'
     __table_args__ = {'comment': '榜单表'}
 
@@ -23,21 +57,30 @@ class Chart(db.Model):
     entries = db.relationship("ChartEntry", back_populates="chart")
     histories = db.relationship("ChartHistory", back_populates="chart")
 
+    file_name = ""
+    file_path = ""
+    movie_info_list = []
+    star_info_list = []
+    code_list = []
 
-class ChartEntry(db.Model):
+    description = ""
+    # 0-未操作 1-正操作 2-操作完成
+    need_state = 0
+
+
+class ChartEntry(BaseModel):
     __tablename__ = 'chart_entry'
     __table_args__ = {'comment': '榜单条目表'}
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True, comment='自增主键Id')
+    #name = db.Column(db.String(256, 'utf8mb4_unicode_ci'), nullable=False, server_default=db.text("''"), comment='榜单名称')
     chart_id = db.Column(db.Integer, db.ForeignKey('chart.id'), nullable=False, comment='榜单Id，关联chart')
     # chart_id = db.Column(db.Integer, nullable=False, comment='榜单Id，关联chart')
     #movie_id = db.Column(db.Integer, nullable=False, comment='电影Id，关联movie')
-    movie_id = db.Column(db.Integer, db.ForeignKey('movie.id'), nullable=False, comment='电影Id，关联movie')
-    rank = db.Column(db.Integer, nullable=False, comment='电影在榜单中的排名')
+    movie_id = db.Column(db.Integer, db.ForeignKey('movie.id'), nullable=False, server_default=db.text("'0'"), comment='电影Id，关联movie')
+    rank = db.Column(db.Integer, nullable=False, server_default=db.text("'0'"), comment='电影在榜单中的排名')
     score = db.Column(db.Float(4), nullable=False, server_default=db.text("'0.00'"), comment='电影评分')
     votes = db.Column(db.Integer, nullable=False, server_default=db.text("'0'"), comment='电影得票数或评分人数')
-    status = db.Column(db.SmallInteger, nullable=False, server_default=db.text("'0'"),
-                       comment='下载状态，0=不存在，1=已爬取，2=爬取失败，3=下载中，4=下载完成，5=已在电影库，6=其他状态')
     created_at = db.Column(db.DateTime, nullable=False, server_default=db.text("CURRENT_TIMESTAMP"), comment='创建时间')
     updated_at = db.Column(db.DateTime, nullable=False,
                            server_default=db.text("CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"),
@@ -47,16 +90,37 @@ class ChartEntry(db.Model):
     chart = db.relationship("Chart", back_populates="entries")
     movie = db.relationship("Movie", back_populates="chart_entries")
 
+    # 普通属性
+    """
+    电影信息
+    """
+    tag = ""
+    code = ""
+    link = ""
+    uri = ""
+    actor_list = []
+    magnet_list = []
 
-class ChartHistory(db.Model):
+    # 排序
+
+    # 看过人数
+    number_of_viewers = 0
+    # 想看人数
+    number_of_want_to = 0
+    # 热度
+    popularity = 0
+    #
+    serial_number = ''
+
+class ChartHistory(BaseModel):
     __tablename__ = 'chart_history'
     __table_args__ = {'comment': '榜单历史表'}
 
     id = db.Column(db.Integer, primary_key=True, comment='自增主键Id')
     chart_id = db.Column(db.Integer, db.ForeignKey('chart.id'), nullable=False, comment='榜单Id，关联chart')
     # chart_id = db.Column(db.Integer, nullable=False, comment='榜单Id，关联chart')
-    movie_id = db.Column(db.Integer, db.ForeignKey('movie.id'), nullable=False, comment='电影Id，关联movie')
-    rank = db.Column(db.Integer, nullable=False, comment='电影历史排名')
+    movie_id = db.Column(db.Integer, db.ForeignKey('movie.id'), nullable=False, server_default=db.text("'0'"), comment='电影Id，关联movie')
+    rank = db.Column(db.Integer, nullable=False, server_default=db.text("'0'"), comment='电影历史排名')
     score = db.Column(db.Float(4), nullable=False, server_default=db.text("'0.00'"), comment='电影历史评分')
     votes = db.Column(db.Integer, nullable=False, server_default=db.text("'0'"), comment='历史得票数或评分人数')
     recorded_at = db.Column(db.DateTime, nullable=False, server_default=db.text("CURRENT_TIMESTAMP"), comment='记录时间')
@@ -69,7 +133,7 @@ class ChartHistory(db.Model):
     movie = db.relationship("Movie", back_populates="chart_histories")
 
 
-class ChartType(db.Model):
+class ChartType(BaseModel):
     __tablename__ = 'chart_type'
     __table_args__ = {'comment': '榜单类型表'}
 
@@ -83,11 +147,9 @@ class ChartType(db.Model):
                            comment='更新时间')
 
     charts = db.relationship("Chart", back_populates="chart_type")
-    # 评分
-    chart_file_type = None
 
 
-class Director(db.Model):
+class Director(BaseModel):
     __tablename__ = 'director'
     __table_args__ = {'comment': '导演信息表'}
 
@@ -113,7 +175,7 @@ class Director(db.Model):
     movies = db.relationship("Movie", secondary="movie_director", back_populates="directors")
 
 
-class Genre(db.Model):
+class Genre(BaseModel):
     __tablename__ = 'genre'
     __table_args__ = {'comment': '类别信息表'}
 
@@ -139,7 +201,7 @@ class Genre(db.Model):
     movies = db.relationship("Movie", secondary="movie_genre", back_populates="genres")
 
 
-class Label(db.Model):
+class Label(BaseModel):
     __tablename__ = 'label'
     __table_args__ = {'comment': '标签信息表'}
 
@@ -165,7 +227,7 @@ class Label(db.Model):
     movies = db.relationship("Movie", secondary="movie_label", back_populates="labels")
 
 
-class Magnet(db.Model):
+class Magnet(BaseModel):
     __tablename__ = 'magnet'
     __table_args__ = {'comment': '磁力链接信息表'}
 
@@ -200,7 +262,7 @@ class Magnet(db.Model):
     have_down = db.Column(db.Integer, nullable=False, server_default=db.text("'0'"), comment='是否已下载（1: 是, 0: 否）')
     _from = db.Column('from', db.Integer, nullable=False, server_default=db.text("'0'"),
                       comment='来源（0: 其他来源,1: javdb, 2: javbus,3: javlib, 4: avmoo）')
-    sort = db.Column(db.Integer, nullable=False, server_default=db.text("'0'"), comment='在来源的排序')
+    rank = db.Column(db.Integer, nullable=False, server_default=db.text("'0'"), comment='在来源的排序')
     created_at = db.Column(db.DateTime, nullable=False, server_default=db.text("CURRENT_TIMESTAMP"), comment='创建时间')
     updated_at = db.Column(db.DateTime, nullable=False,
                            server_default=db.text("CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"),
@@ -209,7 +271,7 @@ class Magnet(db.Model):
     movie = db.relationship("Movie", back_populates="magnets")
 
 
-class Movie(db.Model):
+class Movie(BaseModel):
     __tablename__ = 'movie'
     __table_args__ = {'comment': '电影信息表'}
 
@@ -236,6 +298,8 @@ class Movie(db.Model):
     pic_cover = db.Column(db.String(128, 'utf8mb4_unicode_ci'), nullable=False, server_default=db.text("''"),
                           comment='封面图片URL')
     release_date = db.Column(db.Date, nullable=False, server_default=db.text("'1970-01-01'"), comment='发行日期')
+    download_status = db.Column(db.SmallInteger, nullable=False, server_default=db.text("'0'"),
+                       comment='下载状态，0=未爬取，1=已爬取，2=爬取失败，3=下载失败，4=下载中，5=下载完成，6=已在电影库，7=资源不存在，8=其他状态')
     length = db.Column(db.Integer, nullable=False, server_default=db.text("'0'"), comment='电影时长（分钟）')
     similar = db.Column(db.String(128, 'utf8mb4_unicode_ci'), nullable=False, server_default=db.text("''"),
                         comment='类似影片的URL')
@@ -270,36 +334,14 @@ class Movie(db.Model):
     genres = db.relationship("Genre", secondary="movie_genre", back_populates="movies")
     labels = db.relationship("Label", secondary="movie_label", back_populates="movies")
     series = db.relationship("Series", secondary="movie_series", back_populates="movies")
-    actors = db.relationship("actor", secondary="movie_actor", back_populates="movies")
+    actors = db.relationship("Actor", secondary="movie_actor", back_populates="movies")
     magnets = db.relationship("Magnet", back_populates="movie")
     chart_entries = db.relationship("ChartEntry", back_populates="movie")
     chart_histories = db.relationship("ChartHistory", back_populates="movie")
 
-    # 普通属性
-    """
-    电影信息
-    """
-    rank = None
-    tag = ""
-    code = ""
-    link = ""
-    uri = ""
-    actor_list = []
-    magnet_list = []
-
-    # 排序
-
-    # 看过人数
-    number_of_viewers = 0
-    # 想看人数
-    number_of_want_to = 0
-    # 热度
-    popularity = 0
-    # 评分
-    score = 0
 
 
-class MovieDirector(db.Model):
+class MovieDirector(BaseModel):
     __tablename__ = 'movie_director'
     __table_args__ = {'comment': '电影与导演的关系表'}
 
@@ -312,7 +354,7 @@ class MovieDirector(db.Model):
                            comment='更新时间')
 
 
-class MovieGenre(db.Model):
+class MovieGenre(BaseModel):
     __tablename__ = 'movie_genre'
     __table_args__ = {'comment': '电影与类别的关系表'}
 
@@ -325,7 +367,7 @@ class MovieGenre(db.Model):
                            comment='更新时间')
 
 
-class MovieLabel(db.Model):
+class MovieLabel(BaseModel):
     __tablename__ = 'movie_label'
     __table_args__ = {'comment': '电影与标签的关系表'}
 
@@ -338,7 +380,7 @@ class MovieLabel(db.Model):
                            comment='更新时间')
 
 
-class MovieSery(db.Model):
+class MovieSery(BaseModel):
     __tablename__ = 'movie_series'
     __table_args__ = {'comment': '电影与系列的关系表'}
 
@@ -351,7 +393,7 @@ class MovieSery(db.Model):
                            comment='更新时间')
 
 
-class MovieActor(db.Model):
+class MovieActor(BaseModel):
     __tablename__ = 'movie_actor'
     __table_args__ = {'comment': '电影与演员的关联表'}
 
@@ -364,7 +406,7 @@ class MovieActor(db.Model):
                            comment='更新时间')
 
 
-class Series(db.Model):
+class Series(BaseModel):
     __tablename__ = 'series'
     __table_args__ = {'comment': '系列信息表'}
 
@@ -390,7 +432,7 @@ class Series(db.Model):
     movies = db.relationship("Movie", secondary="movie_series", back_populates="series")
 
 
-class Actor(db.Model):
+class Actor(BaseModel):
     __tablename__ = 'actor'
     __table_args__ = {'comment': '演员信息表'}
 
@@ -408,15 +450,15 @@ class Actor(db.Model):
                          comment='avmoo的id')
     dmm_id = db.Column(db.String(64, 'utf8mb4_unicode_ci'), nullable=False, server_default=db.text("''"),
                        comment='dmm的id')
-    javbus_domain = db.Column(db.String(64, 'utf8mb4_unicode_ci'), nullable=False, server_default=db.text("''"),
+    javbus_uri = db.Column(db.String(64, 'utf8mb4_unicode_ci'), nullable=False, server_default=db.text("''"),
                           comment='javbus的演员首页')
-    javdb_domain = db.Column(db.String(64, 'utf8mb4_unicode_ci'), nullable=False, server_default=db.text("''"),
+    javdb_uri = db.Column(db.String(64, 'utf8mb4_unicode_ci'), nullable=False, server_default=db.text("''"),
                          comment='javdb的演员首页')
-    javlib_domain = db.Column(db.String(64, 'utf8mb4_unicode_ci'), nullable=False, server_default=db.text("''"),
+    javlib_uri = db.Column(db.String(64, 'utf8mb4_unicode_ci'), nullable=False, server_default=db.text("''"),
                           comment='javlib的演员首页')
-    avmoo_domain = db.Column(db.String(64, 'utf8mb4_unicode_ci'), nullable=False, server_default=db.text("''"),
+    avmoo_uri = db.Column(db.String(64, 'utf8mb4_unicode_ci'), nullable=False, server_default=db.text("''"),
                          comment='avmoo的演员首页')
-    dmm_domain = db.Column(db.String(64, 'utf8mb4_unicode_ci'), nullable=False, server_default=db.text("''"),
+    dmm_uri = db.Column(db.String(64, 'utf8mb4_unicode_ci'), nullable=False, server_default=db.text("''"),
                        comment='dmm的演员首页')
     birthday = db.Column(db.Date, nullable=False, server_default=db.text("'1970-01-01'"), comment='生日')
     age = db.Column(db.Integer, nullable=False, server_default=db.text("'0'"), comment='年龄')
@@ -437,7 +479,7 @@ class Actor(db.Model):
     movies = db.relationship("Movie", secondary="movie_actor", back_populates="actors")
 
 
-class Studio(db.Model):
+class Studio(BaseModel):
     __tablename__ = 'studio'
     __table_args__ = {'comment': '制作商信息表'}
 

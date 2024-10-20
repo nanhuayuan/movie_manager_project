@@ -1,45 +1,32 @@
-version: 1
-disable_existing_loggers: False
-
-formatters:
-  simple:
-    format: "%(asctime)s - %(module)s - %(thread)d - %(levelname)s : %(message)s"
-    datefmt: "%Y-%m-%d %H:%M:%S"
-  database:
-    format: "%(asctime)s - %(levelname)s - [%(name)s] - %(message)s"
-    datefmt: "%Y-%m-%d %H:%M:%S"
+# logging-prod.yml
+log_directory: /var/log/myapp
 
 handlers:
   console:
-    class: logging.StreamHandler
-    level: DEBUG
-    formatter: simple
-    stream: ext://sys.stdout
+    level: WARNING
   file:
-    class: logging.handlers.TimedRotatingFileHandler
-    level: DEBUG
-    formatter: simple
-    filename: logs/app.log
-    when: midnight
-    interval: 1
-    backupCount: 30
-    encoding: utf-8
-  database:
-    class: logging.handlers.RotatingFileHandler
     level: INFO
-    formatter: database
-    filename: logs/sql.log
-    maxBytes: 10485760  # 10MB
-    backupCount: 5
+    filename: app.log
+    backupCount: 90
+    mode: '0640'
+  error_file:
+    level: ERROR
+    filename: error.log
+    backupCount: 90
+    mode: '0640'
+  database:
+    level: WARNING
+    filename: sql.log
+    backupCount: 30
+    mode: '0640'
 
 loggers:
   root:
-    level: DEBUG
-    handlers: [console, file, database]
-  sqlalchemy:
     level: INFO
-    handlers: [database]
+    handlers: [file, error_file]
+  sqlalchemy:
+    level: WARNING
     propagate: False
 
 database_log:
-  console_output: DEBUG
+  console_output: WARNING

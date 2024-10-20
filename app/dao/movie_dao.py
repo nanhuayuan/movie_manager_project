@@ -22,7 +22,7 @@ class MovieDAO(BaseDAO[Movie]):
         日志记录：
         - 记录MovieDAO的初始化
         """
-        super().__init__(Movie)
+        super().__init__()
         info("MovieDAO initialized")
 
     def get_id_by_serial_number_or_create(self, movie: Movie) -> Optional[Movie]:

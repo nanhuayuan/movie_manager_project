@@ -8,7 +8,6 @@ from app.services.movie_service import MovieService
 from app.services.jellyfin_service import JellyfinService
 from app.services.everything_service import EverythingService
 from app.services.scraper_service import ScraperService
-from app.services.qbittorrent_service import QBittorrentService
 from app.dao.movie_dao import MovieDAO
 from app.dao.magnet_dao import MagnetDAO
 from app.utils import EverythingUtils
@@ -44,7 +43,6 @@ class Container(containers.DeclarativeContainer):
     jellyfin_service = providers.Singleton(JellyfinService)
     everything_service = providers.Singleton(EverythingService)
     scraper_service = providers.Singleton(ScraperService)
-    qbittorrent_service = providers.Singleton(QBittorrentService)
     redis_client = providers.Singleton(RedisUtil)
     cache_service = providers.Singleton(CacheService)
 
@@ -52,7 +50,6 @@ class Container(containers.DeclarativeContainer):
     jellyfin_service = providers.Factory(JellyfinService, config.jellyfin)
     everything_service = providers.Factory(EverythingService)
     scraper_service = providers.Factory(ScraperService, config.scraper)
-    qbittorrent_service = providers.Factory(QBittorrentService, config.qbittorrent)
 
     # MovieService的提供者，注入所有必要的依赖
     movie_service = providers.Factory(
@@ -62,7 +59,6 @@ class Container(containers.DeclarativeContainer):
         jellyfin_service=jellyfin_service,
         everything_service=everything_service,
         scraper_service=scraper_service,
-        qbittorrent_service=qbittorrent_service,
         redis_client=redis_client,
 
         redis_util=redis_util,

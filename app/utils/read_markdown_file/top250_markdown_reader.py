@@ -8,8 +8,8 @@ import logging
 from concurrent.futures import ThreadPoolExecutor
 import threading
 
-from app.model.db.movie_model import Movie
-from app.model.mdfileinfo import MdFileInfo
+from app.model.db.movie_model import Movie, ChartEntry
+from app.model.db.movie_model import Chart
 
 # 配置日志记录器
 from app.utils.read_markdown_file.markdown_reader import MarkdownReader
@@ -24,7 +24,7 @@ class Top250MarkdownReader(MarkdownReader):
     TAG_PREFIX = "Tag: "
     URI_PATTERN = re.compile(r'\(https://javdb521\.com(.+?)\)')
 
-    def process_file(self, file_path: Path = None) -> Optional[MdFileInfo]:
+    def process_file(self, file_path: Path = None) -> Optional[Chart]:
         """
         处理 TOP 250 榜单文件
 
@@ -32,7 +32,7 @@ class Top250MarkdownReader(MarkdownReader):
             file_path: 文件路径
 
         Returns:
-            Optional[MdFileInfo]: 处理后的 md_file 对象，失败返回 None
+            Optional[Chart]: 处理后的 md_file 对象，失败返回 None
         """
         # 检查缓存
         cached_result = self._get_cached_result(file_path)
@@ -40,54 +40,54 @@ class Top250MarkdownReader(MarkdownReader):
             return cached_result
 
         try:
-            md_file_obj = MdFileInfo()
-            md_file_obj.file_name = file_path.name
-            md_file_obj.file_path = str(file_path)
-            md_file_obj.movie_info_list = []
-            md_file_obj.code_list = []
+            chart_obj = Chart()
+            chart_obj.name = file_path.name.split('.')[0]
+            chart_obj.file_path = str(file_path)
+            chart_obj.entries = []
+            chart_obj.code_list = []
 
-            current_movie = None
+            current_chart_entry = None
             with file_path.open('r', encoding='utf-8') as f:
                 for line in f:
-                    current_movie = self._process_line(
-                        line.strip(), current_movie, md_file_obj
+                    current_chart_entry = self._process_line(
+                        line.strip(), current_chart_entry, chart_obj
                     )
 
             # 缓存结果
-            self._cache_result(file_path, md_file_obj)
-            return md_file_obj
+            self._cache_result(file_path, chart_obj)
+            return chart_obj
         except Exception as e:
             logger.error(f"处理文件 {file_path} 时发生错误: {e}")
             return None
 
-    def _process_line(self, line: str, current_movie: Optional[Movie],
-                      md_file_obj: MdFileInfo) -> Optional[Movie]:
+    def _process_line(self, line: str, current_chart_entry: Optional[ChartEntry],
+                      chart_obj: Chart) -> Optional[ChartEntry]:
         """
         处理单行内容
 
         Args:
             line: 行内容
-            current_movie: 当前处理的电影对象
-            md_file_obj: 当前的 md_file 对象
+            current_chart_entry: 当前处理的电影对象
+            chart_obj: 当前的 md_file 对象
 
         Returns:
-            Optional[Movie]: 更新后的当前电影对象
+            Optional[ChartEntry]: 更新后的当前电影对象
         """
         if line.startswith(self.RANKING_PREFIX):
-            current_movie = Movie()
-            current_movie.rank = int(self._extract_value(line, self.RANKING_PREFIX))
-            current_movie.magnet = []
-        elif line.startswith(self.TAG_PREFIX) and current_movie:
+            current_chart_entry = ChartEntry()
+            current_chart_entry.rank = int(self._extract_value(line, self.RANKING_PREFIX))
+            current_chart_entry.magnet = []
+        elif line.startswith(self.TAG_PREFIX) and current_chart_entry:
             code = self._extract_value(line, self.TAG_PREFIX)
-            current_movie.serial_number = code
-            md_file_obj.code_list.append(code)
+            current_chart_entry.serial_number = code
+            chart_obj.code_list.append(code)
         else:
             uri_match = self.URI_PATTERN.search(line)
-            if uri_match and current_movie:
-                current_movie.link = uri_match.group(1)
-                md_file_obj.movie_info_list.append(current_movie)
-                current_movie = None
-        return current_movie
+            if uri_match and current_chart_entry:
+                current_chart_entry.link = uri_match.group(1)
+                chart_obj.entries.append(current_chart_entry)
+                current_chart_entry = None
+        return current_chart_entry
 
     @staticmethod
     def _extract_value(line: str, prefix: str) -> str:

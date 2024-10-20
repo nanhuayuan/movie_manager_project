@@ -5,7 +5,7 @@ from sqlalchemy import desc
 
 class MagnetDAO(BaseDAO[Magnet]):
     def __init__(self):
-        super().__init__(Magnet)
+        super().__init__()
 
     def get_by_movie_id(self, movie_id: str) -> list[Magnet]:
         return db.session.query(Magnet).filter(Magnet.mid == movie_id).order_by(desc(Magnet.date)).all()

@@ -75,6 +75,9 @@ class JavdbParser(BaseMovieParser):
             # 解析用户统计信息
             self._parse_user_stats(soup, movie)
 
+            # 解析是否有评论信息
+            self._parse_comments(soup, movie)
+
             # 解析磁力链接
             self._parse_magnets(soup, movie)
 
@@ -130,7 +133,7 @@ class JavdbParser(BaseMovieParser):
                 for actor_link in actor_links:
                     actor = Actor()
                     actor.name = actor_link.text.strip()
-                    actor.javdb_domain = actor_link.get('href', '')
+                    actor.javdb_uri = actor_link.get('href', '')
                     movie.actors.append(actor)
                     debug(f"解析演员: {actor.name}")
         except Exception as e:
@@ -208,14 +211,35 @@ class JavdbParser(BaseMovieParser):
         except Exception as e:
             warning(f"解析用户统计信息出错: {str(e)}")
 
+    def _parse_comments(self, soup: BeautifulSoup, movie: Movie):
+        """解析是否有评论信息"""
+        try:
+            # 通过 reviewTab 直接定位到目标内容
+            review_tab = soup.find(attrs={'data-movie-tab-target': 'reviewTab'})
+            if not review_tab:
+                return False
+
+            # 获取 span 文本内容
+            span_text = review_tab.find('span').text.strip()
+
+            # 查找任何数字
+            numbers = re.findall(r'\d+', span_text)
+
+            movie.comments = len(numbers) > 0
+            debug(f"解析是否有评论信息 - ")
+        except Exception as e:
+            warning(f"解析是否有评论信息出错: {str(e)}")
+
     def _parse_magnets(self, soup: BeautifulSoup, movie: Movie):
         """解析磁力链接信息"""
         try:
             magnets = soup.select('.magnet-links .item')
             if magnets:
                 movie.have_mg = 1
-                for magnet in magnets:
+                for line_number, magnet in enumerate(magnets, start=1):
+                #for magnet in magnets:
                     magnet_obj = self._parse_single_magnet(magnet)
+                    magnet_obj.rank = line_number
                     if magnet_obj:
                         movie.magnets.append(magnet_obj)
                         # 更新电影的HD和字幕状态

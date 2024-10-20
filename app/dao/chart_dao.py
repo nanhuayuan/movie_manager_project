@@ -22,65 +22,11 @@ class ChartDAO(BaseDAO[Chart]):
         日志记录：
         - 记录ChartDAO的初始化，便于追踪DAO对象的创建
         """
-        super().__init__(Chart)
+        super().__init__()
         info("ChartDAO initialized")
 
-    def get_by_name_or_create(self, chart: Chart):
-        """
-        根据名称获取榜单，如果不存在则创建新的榜单
 
-        Args:
-            chart (Chart): 要获取或创建的榜单对象
 
-        Returns:
-            Chart: 获取到的或新创建的榜单对象
-            None: 如果发生错误
-
-        日志记录：
-        - 记录尝试获取或创建榜单的操作
-        - 记录是否找到现有榜单或创建了新榜单
-        - 记录可能发生的错误
-        """
-        try:
-            debug(f"Attempting to get or create chart: {chart.name}")
-            flg = self.get_by_name(chart.name)
-            if flg is None:
-                info(f"Creating new chart: {chart.name}")
-                return self.create(chart)
-            else:
-                info(f"Chart already exists: {chart.name}")
-                return flg
-        except Exception as e:
-            error(f"An error occurred while getting or creating chart: {e}")
-            return None
-
-    def get_by_name(self, name: str) -> Optional[Chart]:
-        """
-        根据名称获取榜单
-
-        Args:
-            name (str): 榜单名称
-
-        Returns:
-            Optional[Chart]: 如果找到则返回Chart对象，否则返回None
-
-        日志记录：
-        - 记录尝试获取榜单的操作
-        - 记录是否成功找到榜单
-        - 记录可能发生的错误
-        """
-        try:
-            debug(f"Attempting to get chart by name: {name}")
-            obj = self.db.session.query(Chart).filter(Chart.name == name).first()
-            if obj:
-                info(f"Chart found: {name}")
-            else:
-                info(f"Chart not found: {name}")
-            return obj
-        except Exception as e:
-            error(f"Error in get_by_name: {e}")
-            self.db.session.rollback()
-            return None
 
     def find_by_keyword(self, keyword: str) -> List[Chart]:
         """

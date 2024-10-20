@@ -5,7 +5,7 @@ from sqlalchemy import desc
 
 class ChartHistoryDAO(BaseDAO[ChartHistory]):
     def __init__(self):
-        super().__init__(ChartHistory)
+        super().__init__()
 
     def get_by_chart_and_movie(self, chart_id: int, movie_id: int) -> list[ChartHistory]:
         return db.session.query(ChartHistory).filter(

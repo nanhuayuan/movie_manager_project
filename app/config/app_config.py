@@ -48,9 +48,13 @@ class AppConfig(BaseConfig):
         """返回爬虫配置"""
         return self.config['web_scraper']
 
-    def get_md_file_path_config(self):
+    def get_chart_config(self):
         """返回爬虫配置"""
-        return self.config['md_file_path']
+        return self.config['chart']
+
+    def get_chart_type_config(self):
+        """返回爬虫配置"""
+        return self.get_chart_config()['chart_type']
     def get_app_config(self):
         """返回应用程序配置"""
         return self.config['app']

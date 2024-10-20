@@ -55,14 +55,15 @@ qbittorrent:
   max_retry_attempts: 3  # 下载失败时重试次数
   download_folder: /path/to/download/folder  # 下载文件的保存路径
 
-# 电影列表 markdown 文件路径
-md_file_path:
-  movie_list_path: "data/movies_list/"
-  chart_file_type: normal # 本次读取的文件的榜单类型、名称、描述
-  chart_type_name: javdb_top2502
-  chart_type_description: 'come from javdb'
+# 榜单类基本信息
+chart:
+  chart_list_path: "data/chart_list/"
+  markdown_reader: normal # normal、top_250本次读取的文件的榜单类型、名称、描述
+  chart_type:
+    name: javdb_top2502
+    description: 'come from javdb'
 
 app:
   name: MovieListDownloader
   environment: development  # 可选 development, production
-  movie_list_file: data/movies_list/  # 本地电影榜单文件路径
+  movie_list_file: data/chart_list/  # 本地电影榜单文件路径

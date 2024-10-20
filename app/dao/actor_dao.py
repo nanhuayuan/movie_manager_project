@@ -1,12 +1,10 @@
 from .base_dao import BaseDAO
 from app.model.db.movie_model  import Actor
 
-class StarDAO(BaseDAO[Actor]):
+class ActorDAO(BaseDAO[Actor]):
     def __init__(self):
-        super().__init__(Actor)
+        super().__init__()
 
-    def get_by_name(self, name: str) -> Actor:
-        return db.session.query(Actor).filter(Actor.name == name).first()
 
     def update_favorite(self, star_id: int, favorite: int) -> bool:
         try:

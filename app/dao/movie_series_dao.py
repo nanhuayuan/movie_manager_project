@@ -3,7 +3,7 @@ from app.model.db.movie_model import MovieSery as MovieSeries
 
 class MovieSeriesDAO(BaseDAO[MovieSeries]):
     def __init__(self):
-        super().__init__(MovieSeries)
+        super().__init__()
 
     def get_by_movie_and_series(self, movie_id: int, series_id: int) -> MovieSeries:
         return db.session.query(MovieSeries).filter(

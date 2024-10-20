@@ -1,26 +1,29 @@
 import json
+from typing import List
+
 from app.dao.magnet_dao import MagnetDAO
 from app.dao.movie_dao import MovieDAO
+from app.model.db.movie_model import Movie
+from app.services.base_service import BaseService
 from app.services.cache_service import CacheService
 from app.services.everything_service import EverythingService
 from app.services.jellyfin_service import JellyfinService
-from app.services.qbittorrent_service import QBittorrentService
 from app.utils.redis_client import RedisUtil
 from app.utils.log_util import debug, info, warning, error, critical
 
-class MovieService:
+
+class MovieService(BaseService[Movie, MovieDAO]):
     def __init__(self, movie_dao: MovieDAO = None, magnet_dao: MagnetDAO = None,
                  jellyfin_service: JellyfinService = None, everything_service: EverythingService = None,
-                 qbittorrent_service: QBittorrentService = None,
                  redis_client: RedisUtil = None, cache_service: CacheService = None):
+        super().__init__()
 
         # 初始化各种服务和DAO，如果没有提供则创建默认实例
         self.movie_dao = movie_dao if movie_dao is not None else MovieDAO()
         self.magnet_dao = magnet_dao if magnet_dao is not None else MagnetDAO()
         self.jellyfin_service = jellyfin_service if jellyfin_service is not None else JellyfinService()
         self.everything_service = everything_service if everything_service is not None else EverythingService()
-        #self.scraper_service = scraper_service if scraper_service is not None else ScraperService()
-        self.qbittorrent_service = qbittorrent_service if qbittorrent_service is not None else QBittorrentService()
+        # self.scraper_service = scraper_service if scraper_service is not None else ScraperService()
         self.redis_client = redis_client if redis_client is not None else RedisUtil()
         self.cache_service = cache_service if cache_service is not None else CacheService()
 
@@ -28,6 +31,63 @@ class MovieService:
         self.all_ids_key = "all_movie_ids"  # 所有电影ID的缓存键
 
         info("MovieService initialized")
+
+    def get_movie_from_db_by_serial_number(self, serial_number: str):
+        # 定义 criteria 字典
+        criteria = {'serial_number': serial_number}
+        return self.dao.find_one_by_criteria(criteria)
+
+    def exists_movie(self, serial_number: str):
+        # jellyfin是否存在
+        jellyfin_exists = self.jellyfin_service.check_movie_exists(serial_number)
+
+        if jellyfin_exists:
+            info("serial_number:{} 存在jellyfin", serial_number)
+        else:
+            info("serial_number:{} 不存在jellyfin", serial_number)
+
+        # 本地存在的，才叫存在
+        # everything检查本地是否存在
+        everything_exists = self.everything_service.check_movie_exists(serial_number)
+        if everything_exists:
+            info("serial_number:{} 存在本地文件", serial_number)
+        else:
+            info("serial_number:{} 不存在本地文件", serial_number)
+
+        return everything_exists
+
+    # ------------------use end----------------------
+    def search_movies_by_rating(self, min_rating: float) -> List[Movie]:
+        """按评分搜索电影"""
+        try:
+            debug(f"Searching movies with rating >= {min_rating}")
+            return self.dao.find_by_criteria({'rating': {'$gte': min_rating}})
+        except Exception as e:
+            error(f"Error searching movies by rating: {str(e)}")
+            return []
+
+    def get_unwatched_movies(self) -> List[Movie]:
+        """获取未观看的电影列表"""
+        try:
+            return self.dao.find_by_criteria({'watched': False})
+        except Exception as e:
+            error(f"Error getting unwatched movies: {str(e)}")
+            return []
+
+    def mark_as_downloaded(self, movie_id: int, download_path: str) -> bool:
+        """标记电影为已下载状态"""
+        try:
+            movie = self.get_by_id(movie_id)
+            if not movie:
+                return False
+            return bool(self.dao.update_by_id(movie_id, {
+                'downloaded': True,
+                'download_path': download_path,
+                'download_time': datetime.now()
+            }))
+        except Exception as e:
+            error(f"Error marking movie as downloaded: {str(e)}")
+            return False
 
     def get_movie(self, movie_id: str):
         """
