@@ -1,29 +1,18 @@
-# logging-dev.yml
-log_directory: logs
+# logging-dev.yml - 开发环境日志配置
+log_directory: logs/dev
 
 handlers:
   console:
     level: DEBUG
-    formatter: detailed
   file:
     level: DEBUG
-    filename: app.log
-    backupCount: 30
+    filename: dev-app.log
   error_file:
-    level: ERROR
-    filename: error.log
-    backupCount: 30
-  database:
     level: DEBUG
-    filename: sql.log
-    backupCount: 5
+    filename: dev-error.log
 
 loggers:
   root:
     level: DEBUG
   sqlalchemy:
     level: DEBUG
-    propagate: True
-
-database_log:
-  console_output: DEBUG

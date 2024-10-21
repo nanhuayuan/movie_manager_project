@@ -1,4 +1,4 @@
-# logging-prod.yml
+# logging-prod.yml - 生产环境日志配置
 log_directory: /var/log/myapp
 
 handlers:
@@ -6,27 +6,15 @@ handlers:
     level: WARNING
   file:
     level: INFO
-    filename: app.log
+    filename: prod-app.log
     backupCount: 90
-    mode: '0640'
   error_file:
     level: ERROR
-    filename: error.log
+    filename: prod-error.log
     backupCount: 90
-    mode: '0640'
-  database:
-    level: WARNING
-    filename: sql.log
-    backupCount: 30
-    mode: '0640'
 
 loggers:
   root:
     level: INFO
-    handlers: [file, error_file]
   sqlalchemy:
     level: WARNING
-    propagate: False
-
-database_log:
-  console_output: WARNING

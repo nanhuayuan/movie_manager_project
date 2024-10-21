@@ -1,80 +1,16 @@
-# 数据库配置
+# app-test.yml - 测试环境特定配置
 database:
-  host: "localhost"
-  port: 3306
-  user: root
-  password: 123456
-  dbname: movie
-  echo: true  # 是否打印SQL语句日志
-  pool_size: 10
-  echo_pool:  true
-  max_overflow: 20
+  password: "test123456"
+  dbname: movie_test
 
-# 缓存配置 (Redis)
-redis:
-  host: localhost
-  port: 6379
-  db: 0
-  password: null
-  cache_timeout_seconds: 300  # 缓存超时时间
-
-# Jellyfin API 配置
 jellyfin:
-  api_url: "http://qnap.nas.com:8096"
-  api_key: "8fa1a15a2a484d6fb86167cd31b3cef2"
-  user_id: 'b128da17dbf5412bac37c096e25f2de5'
-  item_id: 'ab532873de6a4fcd09ca15f5d59cd55a'
-  playlists_id: '953141ca3d64b4e0bf3ff52b29bcbbab'
+  api_key: "test_key"
+  user_id: 'test_user'
+  item_id: 'test_item'
 
-# Everything 配置
-everything:
-  exe_path: C:/Program Files/Everything/Everything.exe  # Everything.exe 的路径
-  search_timeout_seconds: 5  # 搜索超时时间
-  host: "localhost"
-  port: 3306
-  search_path: "D:/Movies"
-  file_extensions:
-    - mp4
-    - mkv
-    - avi
-
-# 爬虫配置
-web_scraper:
-  #user_agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3
-  user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
-  timeout_seconds: 10  # 请求超时时间
-  retry_attempts: 3    # 爬虫重试次数
-  javdb_url: "https://javdb.com"
-  proxy_enable: True
-  proxy_url: "http://127.0.0.1:7890"
-
-# 下载工具配置 (qbittorrent)
 qbittorrent:
-  host: "qnap.nas.com"
-  port: 8080
-  username: "admin"
-  password: "adminadmin"
-  max_retry_attempts: 3  # 下载失败时重试次数
-  download_folder: /path/to/download/folder  # 下载文件的保存路径
-
-# 下载工具配置 (BitComet)
-bitcomet:
-  host: "localhost"
-  port: 17049
-  username: "admin"
-  password: "123456"
-  max_retry_attempts: 3  # 下载失败时重试次数
-  download_folder: /path/to/download/folder  # 下载文件的保存路径
-
-# 榜单类基本信息
-chart:
-  chart_list_path: "data/chart_list/"
-  markdown_reader: normal # normal、top_250本次读取的文件的榜单类型、名称、描述
-  chart_type:
-    name: javdb_top2502
-    description: 'come from javdb'
+  password: "testadmin"
+  download_folder: "D:/Downloads/test"
 
 app:
-  name: MovieListDownloader
-  environment: development  # 可选 development, production
-  movie_list_file: ./data/chart_list/  # 本地电影榜单文件路径
+  environment: testing

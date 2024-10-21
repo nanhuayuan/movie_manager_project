@@ -7,7 +7,7 @@ from app.utils.db_util import db
 from datetime import datetime, time, date
 
 
-class BaseModel(db.Model):
+class DBBaseModel(db.Model):
     __abstract__ = True
 
     def to_dict(self):
@@ -38,7 +38,7 @@ class BaseModel(db.Model):
                 setattr(instance, key, value)
         return instance
 
-class Chart(BaseModel):
+class Chart(DBBaseModel):
     __tablename__ = 'chart'
     __table_args__ = {'comment': '榜单表'}
 
@@ -68,7 +68,7 @@ class Chart(BaseModel):
     need_state = 0
 
 
-class ChartEntry(BaseModel):
+class ChartEntry(DBBaseModel):
     __tablename__ = 'chart_entry'
     __table_args__ = {'comment': '榜单条目表'}
 
@@ -112,7 +112,7 @@ class ChartEntry(BaseModel):
     #
     serial_number = ''
 
-class ChartHistory(BaseModel):
+class ChartHistory(DBBaseModel):
     __tablename__ = 'chart_history'
     __table_args__ = {'comment': '榜单历史表'}
 
@@ -133,7 +133,7 @@ class ChartHistory(BaseModel):
     movie = db.relationship("Movie", back_populates="chart_histories")
 
 
-class ChartType(BaseModel):
+class ChartType(DBBaseModel):
     __tablename__ = 'chart_type'
     __table_args__ = {'comment': '榜单类型表'}
 
@@ -149,7 +149,7 @@ class ChartType(BaseModel):
     charts = db.relationship("Chart", back_populates="chart_type")
 
 
-class Director(BaseModel):
+class Director(DBBaseModel):
     __tablename__ = 'director'
     __table_args__ = {'comment': '导演信息表'}
 
@@ -175,7 +175,7 @@ class Director(BaseModel):
     movies = db.relationship("Movie", secondary="movie_director", back_populates="directors")
 
 
-class Genre(BaseModel):
+class Genre(DBBaseModel):
     __tablename__ = 'genre'
     __table_args__ = {'comment': '类别信息表'}
 
@@ -201,7 +201,7 @@ class Genre(BaseModel):
     movies = db.relationship("Movie", secondary="movie_genre", back_populates="genres")
 
 
-class Label(BaseModel):
+class Label(DBBaseModel):
     __tablename__ = 'label'
     __table_args__ = {'comment': '标签信息表'}
 
@@ -227,7 +227,7 @@ class Label(BaseModel):
     movies = db.relationship("Movie", secondary="movie_label", back_populates="labels")
 
 
-class Magnet(BaseModel):
+class Magnet(DBBaseModel):
     __tablename__ = 'magnet'
     __table_args__ = {'comment': '磁力链接信息表'}
 
@@ -271,7 +271,7 @@ class Magnet(BaseModel):
     movie = db.relationship("Movie", back_populates="magnets")
 
 
-class Movie(BaseModel):
+class Movie(DBBaseModel):
     __tablename__ = 'movie'
     __table_args__ = {'comment': '电影信息表'}
 
@@ -341,7 +341,7 @@ class Movie(BaseModel):
 
 
 
-class MovieDirector(BaseModel):
+class MovieDirector(DBBaseModel):
     __tablename__ = 'movie_director'
     __table_args__ = {'comment': '电影与导演的关系表'}
 
@@ -354,7 +354,7 @@ class MovieDirector(BaseModel):
                            comment='更新时间')
 
 
-class MovieGenre(BaseModel):
+class MovieGenre(DBBaseModel):
     __tablename__ = 'movie_genre'
     __table_args__ = {'comment': '电影与类别的关系表'}
 
@@ -367,7 +367,7 @@ class MovieGenre(BaseModel):
                            comment='更新时间')
 
 
-class MovieLabel(BaseModel):
+class MovieLabel(DBBaseModel):
     __tablename__ = 'movie_label'
     __table_args__ = {'comment': '电影与标签的关系表'}
 
@@ -380,7 +380,7 @@ class MovieLabel(BaseModel):
                            comment='更新时间')
 
 
-class MovieSery(BaseModel):
+class MovieSery(DBBaseModel):
     __tablename__ = 'movie_series'
     __table_args__ = {'comment': '电影与系列的关系表'}
 
@@ -393,7 +393,7 @@ class MovieSery(BaseModel):
                            comment='更新时间')
 
 
-class MovieActor(BaseModel):
+class MovieActor(DBBaseModel):
     __tablename__ = 'movie_actor'
     __table_args__ = {'comment': '电影与演员的关联表'}
 
@@ -406,7 +406,7 @@ class MovieActor(BaseModel):
                            comment='更新时间')
 
 
-class Series(BaseModel):
+class Series(DBBaseModel):
     __tablename__ = 'series'
     __table_args__ = {'comment': '系列信息表'}
 
@@ -432,7 +432,7 @@ class Series(BaseModel):
     movies = db.relationship("Movie", secondary="movie_series", back_populates="series")
 
 
-class Actor(BaseModel):
+class Actor(DBBaseModel):
     __tablename__ = 'actor'
     __table_args__ = {'comment': '演员信息表'}
 
@@ -479,7 +479,7 @@ class Actor(BaseModel):
     movies = db.relationship("Movie", secondary="movie_actor", back_populates="actors")
 
 
-class Studio(BaseModel):
+class Studio(DBBaseModel):
     __tablename__ = 'studio'
     __table_args__ = {'comment': '制作商信息表'}
 

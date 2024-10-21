@@ -1,53 +1,36 @@
-# logging-base.yml - 公共基础配置
+# logging-base.yml - 基础日志配置
 version: 1
 disable_existing_loggers: False
 
 formatters:
   simple:
-    format: "%(asctime)s - %(module)s - %(thread)d - %(levelname)s - %(message)s"
+    format: "%(asctime)s - %(module)s - %(levelname)s - %(message)s"
     datefmt: "%Y-%m-%d %H:%M:%S"
   detailed:
-    format: "%(asctime)s - %(name)s - %(module)s - %(funcName)s - %(lineno)d - %(thread)d - %(threadName)s - %(process)d - %(levelname)s : %(message)s"
-    datefmt: "%Y-%m-%d %H:%M:%S"
-  database:
-    format: "%(asctime)s - %(levelname)s - [%(name)s] - %(message)s"
+    format: "%(asctime)s - %(name)s - %(module)s - %(funcName)s - %(lineno)d - %(levelname)s : %(message)s"
     datefmt: "%Y-%m-%d %H:%M:%S"
 
 handlers:
   console:
     class: logging.StreamHandler
-    level: INFO  # 默认级别
     formatter: simple
     stream: ext://sys.stdout
   file:
     class: logging.handlers.TimedRotatingFileHandler
-    level: INFO
     formatter: simple
     when: midnight
     interval: 1
     encoding: utf-8
   error_file:
     class: logging.handlers.RotatingFileHandler
-    level: ERROR
     formatter: detailed
-    maxBytes: 10485760  # 10MB
-    encoding: utf-8
-  database:
-    class: logging.handlers.RotatingFileHandler
-    level: INFO
-    formatter: database
     maxBytes: 10485760
     encoding: utf-8
 
 loggers:
-  "": # root logger
-    level: INFO
+  root:
     handlers: [console, file, error_file]
     propagate: true
   sqlalchemy:
-    level: INFO
-    handlers: [database]
+    handlers: [file]
     propagate: false
-
-database_log:
-  console_output: INFO

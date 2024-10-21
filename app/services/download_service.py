@@ -1,59 +1,56 @@
-from typing import Optional, Dict, Any
-
-from qbittorrent import Client
-import time
-
-from app.utils.download_utils import DownloadUtil
-from app.utils.log_util import debug, info, warning, error, critical
+# download_service.py
+from typing import Optional, List
+from beans import TorrentInfo, DownloadClient
+from download_client import BaseDownloadClient, QBittorrentClient
 
 
 class DownloadService:
-    def __init__(self):
-        self.__class__._instance = self
-        self.download_util = DownloadUtil()
+    """下载服务类，处理下载任务的管理和监控"""
 
+    def __init__(self, client: BaseDownloadClient):
+        self.client = client
+        self.speed_limit = 7 * 1024 * 1024  # 7MB/s默认速度限制
 
+    def add_download(self, magnet: str, save_path: Optional[str] = None) -> bool:
+        """添加下载任务"""
+        return self.client.add_torrent(magnet, save_path)
 
-    def add_torrent(self, torrent_url: str, save_path: str = None) -> Optional[str]:
-        """添加种子任务"""
-        try:
-            debug(f"Adding torrent: {torrent_url}")
-            self.qb_client.download_from_link(torrent_url, savepath=save_path)
-            # 等待一段时间，让qBittorrent有时间添加种子
-            time.sleep(5)
-            #return self.get_torrent_hash(torrent_url)
+    def remove_download(self, torrent_hash: str, delete_files: bool = False) -> bool:
+        """删除下载任务"""
+        return self.client.remove_torrent(torrent_hash, delete_files)
 
-            return True
+    def pause_download(self, torrent_hash: str) -> bool:
+        """暂停下载任务"""
+        return self.client.pause_torrent(torrent_hash)
 
-        except Exception as e:
-            error(f"Failed to add torrent: {str(e)}")
-            return None
+    def resume_download(self, torrent_hash: str) -> bool:
+        """恢复下载任务"""
+        return self.client.resume_torrent(torrent_hash)
 
-    def get_download_status(self, torrent_hash: str) -> Dict[str, Any]:
-        """获取下载状态"""
-        try:
-            return self.qb_client.get_torrent(torrent_hash)
-        except Exception as e:
-            error(f"Failed to get download status: {str(e)}")
-            return {}
+    def get_download_info(self, torrent_hash: str) -> Optional[TorrentInfo]:
+        """获取下载信息"""
+        return self.client.get_torrent_info(torrent_hash)
 
-    def check_download_speed(self, torrent_hash: str, min_speed: int = 100 * 1024) -> bool:  # 最小速度100KB/s
-        try:
-            torrent = self.client.get_torrent(torrent_hash)
-            return torrent['dlspeed'] > min_speed
-        except Exception as e:
-            error(f"Error checking download speed: {str(e)}")
-            return False
+    def get_all_downloads(self) -> List[TorrentInfo]:
+        """获取所有下载任务信息"""
+        return self.client.get_all_torrents()
 
-    def remove_torrent(self, torrent_hash: str):
-        try:
-            self.client.delete([torrent_hash])
-        except Exception as e:
-            error(f"Error removing torrent: {str(e)}")
+    def get_total_speed(self) -> int:
+        """获取总下载速度"""
+        return sum(t.download_speed for t in self.get_all_downloads())
 
-    def get_torrent_hash(self, magnet):
-        torrents = self.client.torrents()
-        for torrent in torrents:
-            if torrent['magnet_uri'] == magnet:
-                return torrent['hash']
-        return None
+    def is_speed_limit_exceeded(self) -> bool:
+        """检查是否超过速度限制"""
+        return self.get_total_speed() > self.speed_limit
+
+    def set_speed_limit(self, limit_bytes: int) -> None:
+        """设置速度限制"""
+        self.speed_limit = limit_bytes
+
+    def get_completed_downloads(self) -> List[TorrentInfo]:
+        """获取已完成的下载"""
+        return [t for t in self.get_all_downloads() if t.status == DownloadStatus.COMPLETED]
+
+    def get_active_downloads(self) -> List[TorrentInfo]:
+        """获取正在下载的任务"""
+        return [t for t in self.get_all_downloads() if t.status == DownloadStatus.DOWNLOADING]

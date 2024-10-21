@@ -1,0 +1,47 @@
+# app-base.yml - 基础应用配置
+database:
+  host: "localhost"
+  port: 3306
+  user: root
+  echo: true
+  pool_size: 10
+  echo_pool: true
+  max_overflow: 20
+
+redis:
+  host: localhost
+  port: 6379
+  db: 0
+  cache_timeout_seconds: 300
+
+jellyfin:
+  api_url: "http://127.0.0.1:8096"
+
+everything:
+  exe_path: C:/Program Files/Everything/Everything.exe
+  search_timeout_seconds: 5
+  search_path: "D:/Movies"
+  file_extensions: [mp4, mkv, avi]
+
+web_scraper:
+  user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+  timeout_seconds: 10
+  retry_attempts: 3
+  proxy_enable: false
+
+qbittorrent:
+  host: "localhost"
+  port: 8080
+  username: "admin"
+  max_retry_attempts: 3
+
+chart:
+  chart_list_path: "data/chart_list/"
+  markdown_reader: normal
+  chart_type:
+    name: javdb_top2502
+    description: 'come from javdb'
+
+app:
+  name: MovieListDownloader
+  movie_list_file: "./data/chart_list/"
