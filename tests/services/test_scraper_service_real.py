@@ -2,7 +2,7 @@ import pytest
 import os
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
-from app.utils.log_util import debug, info, warning, error, critical
+from app.config.log_config import debug, info, warning, error, critical
 
 # 假设这是你的应用工厂函数或者获取 app 和 db 的方法
 from app.main import create_app

@@ -21,8 +21,20 @@ class BaseConfig:
         base_config = self._read_yaml(config_dir / f'{config_name}-base.yml')
         env_config = self._read_yaml(config_dir / f'{config_name}-{env}.yml')
 
-        self.config = base_config
-        self.config.update(env_config)
+        # 使用深度合并
+        self.config = self._deep_merge(base_config, env_config)
+
+    def _deep_merge(self, base: Dict, override: Dict) -> Dict:
+        """递归合并两个字典,保留基础配置的结构"""
+        result = base.copy()
+
+        for key, value in override.items():
+            if key in result and isinstance(result[key], dict) and isinstance(value, dict):
+                result[key] = self._deep_merge(result[key], value)
+            else:
+                result[key] = value
+
+        return result
 
     @staticmethod
     def _read_yaml(file_path: Path) -> Dict[str, Any]:

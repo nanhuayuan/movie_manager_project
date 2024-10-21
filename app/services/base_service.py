@@ -1,5 +1,5 @@
 from typing import Generic, TypeVar, Type, Optional, List, Dict, Any, Tuple, Union
-from app.utils.log_util import debug, info, warning, error, critical
+from app.config.log_config import debug, info, warning, error, critical
 from concurrent.futures import ThreadPoolExecutor
 import functools
 import time

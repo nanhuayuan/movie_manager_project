@@ -1,7 +1,7 @@
 import os
 import importlib
 import inspect
-from app.utils.log_util import debug, info, warning, error, critical
+from app.config.log_config import debug, info, warning, error, critical
 from typing import Dict, Optional, Type, List
 from abc import ABC, abstractmethod
 

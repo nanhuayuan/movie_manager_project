@@ -46,8 +46,10 @@ web_scraper:
   retry_attempts: 3    # 爬虫重试次数
   javdb_url: "https://javdb.com"
 
+
 # 下载工具配置 (qbittorrent)
-qbittorrent:
+download_client:
+  type: "qBittorrent"
   host: "localhost"
   port: 8080
   username: "admin"

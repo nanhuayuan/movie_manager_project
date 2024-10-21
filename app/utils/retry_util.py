@@ -1,5 +1,5 @@
 from typing import List, Optional, Dict, Any, Callable
-from app.utils.log_util import debug, info, warning, error, critical
+from app.config.log_config import debug, info, warning, error, critical
 import time
 from functools import wraps
 

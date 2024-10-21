@@ -5,7 +5,7 @@ from typing import List, Tuple, Optional
 from bs4 import BeautifulSoup
 
 from app.model.db.movie_model import Movie, Director, Actor, Series, Genre, Studio, Magnet
-from app.utils.log_util import debug, info, warning, error
+from app.config.log_config import debug, info, warning, error
 from app.utils.parser.base_movie_parser import BaseMovieParser, ParserError
 from app.utils.parser.model.movie_search_result import MovieSearchResult
 from app.utils.parser.parser_factory import ParserFactory

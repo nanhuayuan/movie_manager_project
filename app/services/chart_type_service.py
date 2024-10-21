@@ -7,7 +7,7 @@ from app.dao import  ChartTypeDAO
 from app.model.chart_file_type_enun import ChartFileType
 from app.model.db.movie_model import  ChartType
 from app.services.base_service import BaseService
-from app.utils.log_util import debug, info, warning, error, critical
+from app.config.log_config import debug, info, warning, error, critical
 from app.utils.read_markdown_file.markdown_reader import MarkdownReader
 
 

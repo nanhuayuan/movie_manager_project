@@ -1,15 +1,64 @@
 # download_service.py
 from typing import Optional, List
-from beans import TorrentInfo, DownloadClient
-from download_client import BaseDownloadClient, QBittorrentClient
+
+from app.model.enums import DownloadStatus
+from app.utils.download_client import TorrentInfo, DownloadClientEnum
+from app.utils.download_client import QBittorrentClient
+
+from app.config.app_config import AppConfig
+from app.utils.download_client import BitCometClient, TransmissionClient
 
 
 class DownloadService:
     """下载服务类，处理下载任务的管理和监控"""
 
-    def __init__(self, client: BaseDownloadClient):
-        self.client = client
-        self.speed_limit = 7 * 1024 * 1024  # 7MB/s默认速度限制
+    def __init__(self):
+        config_loader = AppConfig()
+        self.config = config_loader.get_download_client_config()
+
+        # 使用字典的 get 方法设定默认值
+        self.host = self.config.get('host', '127.0.0.1')
+        self.port = self.config.get('port', 6363)
+        self.username = self.config.get('username', 'admin')
+        self.password = self.config.get('password', 'adminadmin')
+        self.client_type = self.config.get('type', DownloadClientEnum.QBITTORRENT)  # 设置默认类型
+
+        self.speed_limit = 7 * 1024 * 1024  # 7MB/s 默认速度限制
+
+        # 创建客户端
+        self.client = self.create_client()
+
+    def create_client(self, host: str = None, port: int = None, username: str = None, password: str = None, client_type: str = None):
+        # 如果没有传入参数，则使用实例中的属性
+        host = host or self.host
+        port = port or self.port
+        username = username or self.username
+        password = password or self.password
+        client_type = client_type or self.client_type
+
+        if client_type == DownloadClientEnum.QBITTORRENT.value:
+            return QBittorrentClient(
+                host=host,
+                port=port,
+                username=username,
+                password=password
+            )
+        elif client_type == DownloadClientEnum.BITCOMET.value:
+            return BitCometClient(
+                host=host,
+                port=port,
+                username=username,
+                password=password
+            )
+        elif client_type == DownloadClientEnum.TRANSMISSION.value:
+            return TransmissionClient(
+                host=host,
+                port=port,
+                username=username,
+                password=password
+            )
+        else:
+            raise ValueError(f"不支持的下载客户端类型: {client_type}")
 
     def add_download(self, magnet: str, save_path: Optional[str] = None) -> bool:
         """添加下载任务"""
@@ -54,3 +103,12 @@ class DownloadService:
     def get_active_downloads(self) -> List[TorrentInfo]:
         """获取正在下载的任务"""
         return [t for t in self.get_all_downloads() if t.status == DownloadStatus.DOWNLOADING]
+
+    def get_download_status(self, serial_number):
+        return DownloadStatus.COMPLETED.value
+
+    def check_download_speed(self, serial_number):
+        pass
+
+    def get_next_magnet(self, serial_number, magnets):
+        pass

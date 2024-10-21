@@ -23,7 +23,7 @@ from app.services.studio_service import StudioService
 from app.services.cache_service import CacheService
 from app.utils.http_util import HttpUtil
 from app.utils.page_parser_util import PageParserUtil
-from app.utils.log_util import debug, info, warning, error, critical
+from app.config.log_config import debug, info, warning, error, critical
 from app.utils.parser.parser_factory import ParserFactory
 from app.utils.retry_util import RetryUtil
 

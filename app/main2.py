@@ -10,7 +10,7 @@ def main():
     config_loader = AppConfig()
     db_config = config_loader.get_database_config()
     jellyfin_config = config_loader.get_jellyfin_config()
-    qbittorrent_config = config_loader.get_qbittorrent_config()
+    qbittorrent_config = config_loader.get_download_client_config()
 
     movie_repository = MovieRepository(db_config)
     jellyfin_checker = JellyfinChecker(jellyfin_config)

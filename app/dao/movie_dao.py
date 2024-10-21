@@ -6,7 +6,7 @@ from datetime import datetime
 
 from app.dao.base_dao import BaseDAO
 from app.model.db.movie_model import Movie, Director, Genre, Actor, Label, Series, Studio
-from app.utils.log_util import debug, info, warning, error, critical
+from app.config.log_config import debug, info, warning, error, critical
 
 class MovieDAO(BaseDAO[Movie]):
     """

@@ -12,7 +12,8 @@ jellyfin:
   user_id: 'prod_user'
   item_id: 'prod_item'
 
-qbittorrent:
+download_client:
+  type: "qBittorrent"
   password: "prod_qb_pass"
   download_folder: "/data/downloads/prod"
 

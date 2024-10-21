@@ -8,13 +8,13 @@ import random
 
 from app.config.app_config import AppConfig
 from app.enum.download_client_enum import DownloadClient
-from app.utils.log_util import logger
+from app.config.log_config import logger
 
 
 class DownloadUtil:
     def __init__(self):
         config = AppConfig()
-        self.qb_config = config.get_qbittorrent_config()
+        self.qb_config = config.get_download_client_config()
         self.bc_config = config.get_bitcomet_config()
 
         self.qbittorrent_url = f"http://{self.qb_config['username']}:{self.qb_config['password']}@{self.qb_config['host']}:{self.qb_config['port']}"

@@ -11,7 +11,7 @@ from app.model.mdfileinfo import MdFileInfo
 from app.services.base_service import BaseService
 from app.services.chart_entry_service import ChartEntryService
 from app.services.chart_type_service import ChartTypeService
-from app.utils.log_util import debug, info, warning, error, critical
+from app.config.log_config import debug, info, warning, error, critical
 from app.utils.read_markdown_file.markdown_reader import MarkdownReader
 from app.utils.read_markdown_file.normal_markdown_reader import NormalMarkdownReader
 from app.utils.read_markdown_file.top250_markdown_reader import Top250MarkdownReader

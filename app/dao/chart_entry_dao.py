@@ -6,7 +6,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from .base_dao import BaseDAO
 from app.model.db.movie_model import ChartEntry
 from app.model.enums import DownloadStatus
-from app.utils.log_util import debug, info, warning, error, critical
+from app.config.log_config import debug, info, warning, error, critical
 
 class ChartEntryDAO(BaseDAO[ChartEntry]):
     """

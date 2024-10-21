@@ -6,7 +6,7 @@ from bs4 import BeautifulSoup
 from typing import Optional
 
 from app.config.app_config import AppConfig
-from app.utils.log_util import debug, info, warning, error, critical
+from app.config.log_config import debug, info, warning, error, critical
 """"""
 import os
 os.environ["http_proxy"] = "http://127.0.0.1:7890"

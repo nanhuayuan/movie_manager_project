@@ -5,7 +5,7 @@ from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 from sqlalchemy import and_, or_, desc, asc
 from flask_sqlalchemy import SQLAlchemy
 from flask import current_app
-from app.utils.log_util import debug, info, warning, error, critical
+from app.config.log_config import debug, info, warning, error, critical
 
 T = TypeVar('T')
 

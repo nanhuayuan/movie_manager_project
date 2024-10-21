@@ -18,3 +18,8 @@ redis==4.5.5
 series==2.35.36
 PyMySQL==1.0.3
 SQLAlchemy==2.0.15
+
+qbittorrent-api
+qbittorrent
+transmissionrpc
+

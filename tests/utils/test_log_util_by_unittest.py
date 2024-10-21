@@ -13,5 +13,5 @@ class TestYourCode(unittest.TestCase):
         os.environ.pop('TESTING', None)
 
     def test_something(self):
-        from app.utils.log_util import logger
+        from app.config.log_config import logger
         logger.info("This should appear in console")

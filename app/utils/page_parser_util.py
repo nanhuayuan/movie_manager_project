@@ -1,6 +1,6 @@
 from bs4 import BeautifulSoup
 from typing import Optional, List, Dict
-from app.utils.log_util import debug, info, warning, error, critical
+from app.config.log_config import debug, info, warning, error, critical
 class PageParserUtil:
     @staticmethod
     def extract_movie_info(soup: BeautifulSoup) -> Dict[str, any]:

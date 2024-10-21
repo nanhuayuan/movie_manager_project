@@ -12,7 +12,8 @@ web_scraper:
   proxy_enable: true
   proxy_url: "http://127.0.0.1:7890"
 
-qbittorrent:
+download_client:
+  type: "qBittorrent"
   password: "devadmin"
   download_folder: "D:/Downloads/dev"
 

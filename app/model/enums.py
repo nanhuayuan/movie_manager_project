@@ -24,14 +24,16 @@ class DownloadStatus(IntEnum):
     CRAWLED = 1  # 已爬取相关信息，但尚未开始下载
     CRAWL_FAILED = 2  # 爬取信息失败
     DOWNLOAD_FAILED = 3  # 下载失败
-    QUEUED  = 4  # 队列中
-    DOWNLOADING = 5  # 正在下载中
-    PAUSED  = 6  # 已暂停
-    CHECKING = 7  # 检查中
-    ALLOCATING = 8  # 分配空间
-    IN_LIBRARY = 9  # 已加入媒体库
-    NO_SOURCE = 10  # 资源不存在
-    OTHER = 11  # 其他状态或特殊情况
+    ERROR = 4  # 下载错误
+    QUEUED = 5  # 队列中
+    CHECKING = 6  # 检查中
+    ALLOCATING = 7  # 分配空间
+    DOWNLOADING = 8  # 正在下载中
+    PAUSED = 9  # 已暂停
+    COMPLETED = 10  # 已完成，但可能还未加入媒体库
+    IN_LIBRARY = 11  # 已加入媒体库
+    NO_SOURCE = 12  # 资源不存在
+    OTHER = 13  # 其他状态或特殊情况
 
 
 class FavoriteStatus(IntEnum):

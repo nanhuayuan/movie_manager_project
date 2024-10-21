@@ -5,7 +5,7 @@ from app.dao import ChartEntryDAO
 from app.model.db.movie_model import ChartEntry, Movie
 from app.model.enums import DownloadStatus
 from app.services.base_service import BaseService
-from app.utils.log_util import debug, info, warning, error, critical
+from app.config.log_config import debug, info, warning, error, critical
 
 
 @dataclass

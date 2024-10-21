@@ -5,7 +5,7 @@ from datetime import datetime
 
 from .base_dao import BaseDAO
 from app.model.db.movie_model import Chart
-from app.utils.log_util import debug, info, warning, error, critical
+from app.config.log_config import debug, info, warning, error, critical
 
 
 class ChartDAO(BaseDAO[Chart]):

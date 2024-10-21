@@ -27,9 +27,12 @@ web_scraper:
   user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
   timeout_seconds: 10
   retry_attempts: 3
-  proxy_enable: false
+  javdb_url: "https://javdb.com"
+  proxy_enable: True
+  proxy_url: "http://127.0.0.1:7890"
 
-qbittorrent:
+download_client:
+  type: "qBittorrent"
   host: "localhost"
   port: 8080
   username: "admin"

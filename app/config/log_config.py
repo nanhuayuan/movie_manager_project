@@ -3,8 +3,7 @@ import logging
 import logging.config
 import os
 from pathlib import Path
-from plistlib import Dict
-from typing import Any
+from typing import Any, Dict
 
 import yaml
 
@@ -28,16 +27,30 @@ class LogUtil:
         return cls._instance
 
     def _setup_logging(self):
-        config_dir = Path(__file__).parent.parent.parent / 'config'
-        base_config = self._read_yaml(config_dir / 'logging-base.yml')
-        env = os.getenv('APP_ENV', 'dev')
-        env_config = self._read_yaml(config_dir / f'logging-{env}.yml')
-
-        logging_config = base_config.copy()
-        logging_config.update(env_config)
-
+        # 直接使用 LogConfig 中已经合并好的配置
+        logging_config = self._config.config
         self._process_log_paths(logging_config)
+
+        # 添加调试日志(可选)
+        print("Loaded logging config:", logging_config)
+
+        # 验证配置完整性
+        self._validate_logging_config(logging_config)
         logging.config.dictConfig(logging_config)
+
+    def _validate_logging_config(self, config: Dict[str, Any]) -> None:
+        """验证日志配置的完整性"""
+        required_handler_keys = {
+            'console': ['class', 'formatter', 'level'],
+            'file': ['class', 'formatter', 'level', 'filename'],
+            'error_file': ['class', 'formatter', 'level', 'filename']
+        }
+
+        for handler_name, required_keys in required_handler_keys.items():
+            handler_config = config.get('handlers', {}).get(handler_name, {})
+            missing_keys = [key for key in required_keys if key not in handler_config]
+            if missing_keys:
+                raise ValueError(f"Handler '{handler_name}' missing required keys: {missing_keys}")
 
     def _process_log_paths(self, config: Dict[str, Any]):
         log_dir = Path(config.get('log_directory', 'logs'))
@@ -47,11 +60,6 @@ class LogUtil:
             if 'filename' in handler:
                 log_path = log_dir / handler['filename']
                 handler['filename'] = str(log_path)
-
-    @staticmethod
-    def _read_yaml(file_path: Path) -> Dict[str, Any]:
-        with file_path.open(encoding='utf-8') as f:
-            return yaml.safe_load(f) or {}
 
     @staticmethod
     def get_logger(name=None):

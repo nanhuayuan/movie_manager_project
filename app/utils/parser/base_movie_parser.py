@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from datetime import datetime, date
 from typing import List, Any, Dict
 import re
-from app.utils.log_util import debug, info, warning, error, critical
+from app.config.log_config import debug, info, warning, error, critical
 from bs4 import BeautifulSoup
 
 from app.model.db.movie_model import Movie
