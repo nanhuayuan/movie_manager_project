@@ -59,8 +59,6 @@ class MovieService(BaseService[Movie, MovieDAO]):
 
         return everything_exists
 
-    def save(self, movie: Movie) -> Movie:
-        pass
 
     # ------------------use end----------------------
     def search_movies_by_rating(self, min_rating: float) -> List[Movie]:

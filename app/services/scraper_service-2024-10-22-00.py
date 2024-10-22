@@ -197,11 +197,7 @@ class ScraperService:
             return self.extract_movie_page_uri(soup)
         return None
 
-    def extract_movie_page_uri(self, soup: BeautifulSoup) -> Optional[str]:
-        """从搜索结果提取电影页面URI"""
-        parser = ParserFactory.get_parser()
-        results = parser.parse_search_results(soup)
-        return results[0].uri if results else None
+
 
     def extract_movie_details_page(self, soup: BeautifulSoup) -> Optional[Movie]:
         """从电影详情页提取电影信息"""

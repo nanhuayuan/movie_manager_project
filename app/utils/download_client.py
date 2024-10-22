@@ -144,47 +144,25 @@ class QBittorrentClient(BaseDownloadClient):
             self.client = None
 
     def add_torrent(self, magnet: str, save_path: Optional[str] = None) -> bool:
-        try:
-            options = {}
-            if save_path:
-                options['save_path'] = save_path
-            return self.client.torrents_add(urls=magnet, **options) == "Ok."
-        except Exception:
-            return False
+        if save_path:
+            return self.client.torrents_add(urls=magnet, save_path=save_path) == "Ok."
+        return self.client.torrents_add(urls=magnet) == "Ok."
 
     def remove_torrent(self, torrent_hash: str, delete_files: bool = False) -> bool:
-        try:
-            self.client.torrents_delete(delete_files=delete_files, torrent_hashes=torrent_hash)
-            return True
-        except Exception:
-            return False
+        return self.client.torrents_delete(delete_files=delete_files, torrent_hashes=torrent_hash)
 
     def pause_torrent(self, torrent_hash: str) -> bool:
-        try:
-            self.client.torrents_pause(torrent_hashes=torrent_hash)
-            return True
-        except Exception:
-            return False
+        return self.client.torrents_pause(torrent_hashes=torrent_hash)
 
     def resume_torrent(self, torrent_hash: str) -> bool:
-        try:
-            self.client.torrents_resume(torrent_hashes=torrent_hash)
-            return True
-        except Exception:
-            return False
+        return self.client.torrents_resume(torrent_hashes=torrent_hash)
 
     def get_torrent_info(self, torrent_hash: str) -> Optional[TorrentInfo]:
-        try:
-            torrent = self.client.torrents_info(torrent_hashes=torrent_hash)[0]
-            return self._convert_to_torrent_info(torrent)
-        except Exception:
-            return None
+        torrent = self.client.torrents_info(torrent_hashes=torrent_hash)[0]
+        return self._convert_to_torrent_info(torrent)
 
     def get_all_torrents(self) -> List[TorrentInfo]:
-        try:
-            return [self._convert_to_torrent_info(t) for t in self.client.torrents_info()]
-        except Exception:
-            return []
+        return [self._convert_to_torrent_info(t) for t in self.client.torrents_info()]
 
     def _convert_to_torrent_info(self, torrent) -> TorrentInfo:
         """转换qBittorrent的种子信息为通用格式"""
@@ -219,86 +197,55 @@ class QBittorrentClient(BaseDownloadClient):
 
 
 # 在download_client.py中添加BitComet和Transmission的实现:
-
 class BitCometClient(BaseDownloadClient):
     """BitComet客户端实现"""
 
     def __init__(self, host: str, port: int, username: str, password: str):
         self.base_url = f"http://{host}:{port}"
-        self.username = username
-        self.password = password
+        self.auth = (username, password)
         self.session = requests.Session()
-        self.session.auth = (username, password)
-        self.connected = False
 
     def connect(self) -> bool:
         try:
-            response = self.session.get(f"{self.base_url}/panel/info")
-            self.connected = response.status_code == 200
-            return self.connected
-        except Exception:
-            self.connected = False
+            response = self.session.get(f"{self.base_url}/panel/info", auth=self.auth)
+            return response.status_code == 200
+        except:
             return False
 
     def disconnect(self) -> None:
-        if self.connected:
-            self.session.close()
-            self.connected = False
+        self.session.close()
 
     def add_torrent(self, magnet: str, save_path: Optional[str] = None) -> bool:
-        try:
-            data = {'url': magnet}
-            if save_path:
-                data['savepath'] = save_path
-            response = self.session.post(f"{self.base_url}/panel/add_task", data=data)
-            return response.status_code == 200
-        except Exception:
-            return False
+        data = {'url': magnet}
+        if save_path:
+            data['savepath'] = save_path
+        response = self.session.post(f"{self.base_url}/panel/addtask", data=data, auth=self.auth)
+        return response.status_code == 200
 
     def remove_torrent(self, torrent_hash: str, delete_files: bool = False) -> bool:
-        try:
-            params = {
-                'hash': torrent_hash,
-                'delete_files': '1' if delete_files else '0'
-            }
-            response = self.session.post(f"{self.base_url}/panel/remove_task", params=params)
-            return response.status_code == 200
-        except Exception:
-            return False
+        data = {'hash': torrent_hash, 'delete_files': int(delete_files)}
+        response = self.session.post(f"{self.base_url}/panel/removetask", data=data, auth=self.auth)
+        return response.status_code == 200
 
     def pause_torrent(self, torrent_hash: str) -> bool:
-        try:
-            response = self.session.post(f"{self.base_url}/panel/pause_task", data={'hash': torrent_hash})
-            return response.status_code == 200
-        except Exception:
-            return False
+        response = self.session.post(f"{self.base_url}/panel/pausetask", data={'hash': torrent_hash}, auth=self.auth)
+        return response.status_code == 200
 
     def resume_torrent(self, torrent_hash: str) -> bool:
-        try:
-            response = self.session.post(f"{self.base_url}/panel/resume_task", data={'hash': torrent_hash})
-            return response.status_code == 200
-        except Exception:
-            return False
+        response = self.session.post(f"{self.base_url}/panel/resumetask", data={'hash': torrent_hash}, auth=self.auth)
+        return response.status_code == 200
 
     def get_torrent_info(self, torrent_hash: str) -> Optional[TorrentInfo]:
-        try:
-            response = self.session.get(f"{self.base_url}/panel/task_info", params={'hash': torrent_hash})
-            if response.status_code == 200:
-                task_info = response.json()
-                return self._convert_to_torrent_info(task_info)
-            return None
-        except Exception:
-            return None
+        response = self.session.get(f"{self.base_url}/panel/taskinfo", params={'hash': torrent_hash}, auth=self.auth)
+        if response.status_code == 200:
+            return self._convert_to_torrent_info(response.json())
+        return None
 
     def get_all_torrents(self) -> List[TorrentInfo]:
-        try:
-            response = self.session.get(f"{self.base_url}/panel/task_list")
-            if response.status_code == 200:
-                tasks = response.json()
-                return [self._convert_to_torrent_info(task) for task in tasks]
-            return []
-        except Exception:
-            return []
+        response = self.session.get(f"{self.base_url}/panel/tasklist", auth=self.auth)
+        if response.status_code == 200:
+            return [self._convert_to_torrent_info(task) for task in response.json()]
+        return []
 
     def _convert_to_torrent_info(self, task: dict) -> TorrentInfo:
         """转换BitComet的任务信息为通用格式"""
@@ -327,7 +274,6 @@ class BitCometClient(BaseDownloadClient):
             magnet_uri=task.get('magnet_uri', '')
         )
 
-
 class TransmissionClient(BaseDownloadClient):
     """Transmission客户端实现"""
 
@@ -346,62 +292,52 @@ class TransmissionClient(BaseDownloadClient):
                 user=self.username,
                 password=self.password
             )
-            # 测试连接
-            self.client.session_stats()
             return True
-        except Exception:
+        except:
             return False
 
     def disconnect(self) -> None:
-        if self.client:
-            self.client = None
+        self.client = None
 
     def add_torrent(self, magnet: str, save_path: Optional[str] = None) -> bool:
         try:
-            kwargs = {}
             if save_path:
-                kwargs['download_dir'] = save_path
-            self.client.add_torrent(magnet, **kwargs)
+                self.client.add_torrent(magnet, download_dir=save_path)
+            else:
+                self.client.add_torrent(magnet)
             return True
-        except Exception:
+        except:
             return False
 
     def remove_torrent(self, torrent_hash: str, delete_files: bool = False) -> bool:
         try:
             self.client.remove_torrent(torrent_hash, delete_data=delete_files)
             return True
-        except Exception:
+        except:
             return False
 
     def pause_torrent(self, torrent_hash: str) -> bool:
         try:
             self.client.stop_torrent(torrent_hash)
             return True
-        except Exception:
+        except:
             return False
 
     def resume_torrent(self, torrent_hash: str) -> bool:
         try:
             self.client.start_torrent(torrent_hash)
             return True
-        except Exception:
+        except:
             return False
 
     def get_torrent_info(self, torrent_hash: str) -> Optional[TorrentInfo]:
-        try:
-            torrent = self.client.get_torrent(torrent_hash)
-            return self._convert_to_torrent_info(torrent)
-        except Exception:
-            return None
+        torrent = self.client.get_torrent(torrent_hash)
+        return self._convert_to_torrent_info(torrent)
 
     def get_all_torrents(self) -> List[TorrentInfo]:
-        try:
-            return [self._convert_to_torrent_info(t) for t in self.client.get_torrents()]
-        except Exception:
-            return []
+        return [self._convert_to_torrent_info(t) for t in self.client.get_torrents()]
 
     def _convert_to_torrent_info(self, torrent) -> TorrentInfo:
-        """转换Transmission的种子信息为通用格式"""
         status_map = {
             'downloading': DownloadStatus.DOWNLOADING,
             'seeding': DownloadStatus.COMPLETED,
@@ -425,5 +361,5 @@ class TransmissionClient(BaseDownloadClient):
             uploaded=torrent.uploadedEver,
             num_seeds=torrent.seeders,
             num_peers=torrent.peersConnected,
-            magnet_uri=torrent.magnetLink if hasattr(torrent, 'magnetLink') else None
+            magnet_uri=getattr(torrent, 'magnetLink', None)
         )

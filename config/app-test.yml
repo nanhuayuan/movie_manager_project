@@ -12,9 +12,10 @@ jellyfin:
 
 download_client:
   host: "qnap.nas.com"
+  port: 6363
   type: "qBittorrent"
   password: "adminadmin"
-  download_folder: "D:/Downloads/test"
+  download_folder: ""
 
 app:
   environment: testing
