@@ -6,7 +6,7 @@ import json
 
 from app.config.app_config import AppConfig
 from app.model.db.movie_model import Movie, Chart, ChartEntry, ChartType
-from app.model.enums import DownloadStatus
+from app.utils.download_client import DownloadStatus
 from app.services.actor_service import ActorService
 from app.services.base_service import BaseService
 from app.services.chart_entry_service import ChartEntryService

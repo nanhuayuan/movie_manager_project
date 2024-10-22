@@ -9,8 +9,9 @@ from contextlib import contextmanager
 
 from app.config.app_config import AppConfig
 from app.model.db.movie_model import Movie, Chart, ChartEntry, ChartType, Studio
-from app.model.enums import DownloadStatus
+
 from app.services.base_service import BaseService
+from app.utils.download_client import DownloadStatus
 from app.utils.http_util import HttpUtil
 from app.utils.page_parser_util import PageParserUtil
 from app.config.log_config import debug, info, warning, error, critical

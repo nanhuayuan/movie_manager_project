@@ -6,7 +6,7 @@ from app.config.app_config import AppConfig
 from app.dao import ChartDAO, MovieDAO
 from app.model.chart_file_type_enun import ChartFileType
 from app.model.db.movie_model import Movie, ChartType, Chart, ChartEntry
-from app.model.enums import DownloadStatus
+from app.utils.download_client import DownloadStatus
 from app.model.mdfileinfo import MdFileInfo
 from app.services.base_service import BaseService
 from app.services.chart_entry_service import ChartEntryService

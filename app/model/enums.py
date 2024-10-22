@@ -14,26 +14,7 @@ class HaveStatus(IntEnum):
     PENDING = 2  # 资源状态待定或未知
 
 
-class DownloadStatus(IntEnum):
-    """
-    表示电影或资源的下载状态。
 
-    主要用于 movie 表的 download_status 字段，表示榜单中电影的下载进度。
-    """
-    NOT_CRAWLED = 0  # 未爬取
-    CRAWLED = 1  # 已爬取相关信息，但尚未开始下载
-    CRAWL_FAILED = 2  # 爬取信息失败
-    DOWNLOAD_FAILED = 3  # 下载失败
-    ERROR = 4  # 下载错误
-    QUEUED = 5  # 队列中
-    CHECKING = 6  # 检查中
-    ALLOCATING = 7  # 分配空间
-    DOWNLOADING = 8  # 正在下载中
-    PAUSED = 9  # 已暂停
-    COMPLETED = 10  # 已完成，但可能还未加入媒体库
-    IN_LIBRARY = 11  # 已加入媒体库
-    NO_SOURCE = 12  # 资源不存在
-    OTHER = 13  # 其他状态或特殊情况
 
 
 class FavoriteStatus(IntEnum):
