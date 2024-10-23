@@ -135,7 +135,7 @@ class QBittorrentClient(BaseDownloadClient):
             )
             self.client.auth_log_in()
             return True
-        except Exception:
+        except:
             return False
 
     def disconnect(self) -> None:
@@ -196,7 +196,6 @@ class QBittorrentClient(BaseDownloadClient):
         )
 
 
-# 在download_client.py中添加BitComet和Transmission的实现:
 class BitCometClient(BaseDownloadClient):
     """BitComet客户端实现"""
 
@@ -273,6 +272,7 @@ class BitCometClient(BaseDownloadClient):
             num_peers=task.get('peers', 0),
             magnet_uri=task.get('magnet_uri', '')
         )
+
 
 class TransmissionClient(BaseDownloadClient):
     """Transmission客户端实现"""

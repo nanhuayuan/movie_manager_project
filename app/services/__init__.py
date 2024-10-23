@@ -11,6 +11,7 @@ from .chart_type_service import ChartTypeService
 from .chart_entry_service import ChartEntryService
 from .download_service import DownloadService
 from .cache_service import CacheService
+from .everything_service import EverythingService
 
 __all__ = [
     'MovieService', 'ActorService', 'StudioService', 'DirectorService',

@@ -15,7 +15,7 @@ web_scraper:
 download_client:
   type: "qBittorrent"
   port: 8080
-  password: "devadmin"
+  password: "adminadmin"
   download_folder: "D:/Downloads/dev"
 
 app:

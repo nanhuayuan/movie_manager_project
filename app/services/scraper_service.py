@@ -49,7 +49,7 @@ class ScraperService:
             MovieService, ActorService, StudioService, DirectorService,
             GenreService, MagnetService, SeriesService, LabelService,
             ChartService, ChartTypeService, ChartEntryService,
-            DownloadService, CacheService
+            DownloadService, CacheService,EverythingService
         )
 
         services = {
@@ -65,7 +65,8 @@ class ScraperService:
             'chart_type': ChartTypeService,
             'chart_entry': ChartEntryService,
             'download': DownloadService,
-            'cache': CacheService
+            'cache': CacheService,
+            'everything': EverythingService
         }
 
         for name, service_class in services.items():
@@ -153,12 +154,6 @@ class ScraperService:
         Returns:
             解析后的电影实体
         """
-        # 检查缓存
-        cache_key = f"movie:{serial_number}"
-        cached_movie = self.cache_service.get(cache_key)
-        if cached_movie:
-            return Movie.from_dict(cached_movie)
-
         # 获取页面URL
         url = self._get_movie_page_url(serial_number)
         if not url:
@@ -172,14 +167,18 @@ class ScraperService:
 
         movie = self.parser.parse_movie_details_page(soup)
 
-        # 处理数据库已有记录
-        movie_from_db = self.movie_service.get_movie_from_db_by_serial_number(serial_number)
-        if movie_from_db:
-            movie.id = movie_from_db.id
-
-        # 更新缓存
-        self.cache_service.set(cache_key, movie.to_dict(), self.CACHE_CONFIG['movie'][1])
-
+        # 检查缓存
+        cache_key = f"movie:{serial_number}"
+        cached_movie = self.cache_service.get(cache_key)
+        if cached_movie:
+            movie.id = Movie.from_dict(cached_movie).id
+        else:
+            # 处理数据库已有记录
+            movie_from_db = self.movie_service.get_movie_from_db_by_serial_number(serial_number)
+            if movie_from_db:
+                movie.id = movie_from_db.id
+                # 更新缓存
+                self.cache_service.set(cache_key, movie.to_dict(), self.CACHE_CONFIG['movie'][1])
         return movie
 
     def _get_movie_page_url(self, serial_number: str) -> Optional[str]:
@@ -220,12 +219,8 @@ class ScraperService:
                 processed = []
                 for entity in entities:
                     processed_entity = self._process_entity(entity, service, cache_type)
-                    if processed_entity:
-                        processed.append(processed_entity)
-
-                setattr(movie, attr, processed)
             else:
-                setattr(movie, attr, self._process_entity(entities, service, cache_type))
+                self._process_entity(entities, service, cache_type)
 
     def _process_entity(self, entity: Any, service: BaseService, cache_type: str) -> Any:
         """处理单个实体
@@ -239,24 +234,32 @@ class ScraperService:
             处理后的实体
         """
         if not entity or not entity.name:
+            info(f"实体无效: {entity}")
             return None
 
         # 检查缓存
         cache_key = f"{self.CACHE_CONFIG[cache_type][0]}{entity.name}"
         cached = self.cache_service.get(cache_key)
         if cached:
-            return entity.from_dict(cached)
-
-        # 查询数据库
-        db_entity = service.get_by_name(entity.name)
-        if db_entity:
-            self.cache_service.set(cache_key, entity.to_dict(), self.CACHE_CONFIG[cache_type][1])
-            entity.id = db_entity.id
+            # 使用类型(type)来调用classmethod
+            entity.id =  type(entity).from_dict(cached)
+        else:
+            # 查询数据库
+            db_entity = service.get_by_name(entity.name)
+            if db_entity:
+                self.cache_service.set(cache_key, entity.to_dict(), self.CACHE_CONFIG[cache_type][1])
+                entity.id = db_entity.id
 
         return entity
 
     def _process_movie_download(self, movie: Movie) -> int:
         """处理电影下载状态"""
+
+        if self.movie_service.jellyfin_service.file_exists(movie.serial_number):
+            return DownloadStatus.IN_LIBRARY.value
+        elif self.everything_service.local_exists_movie(movie.serial_number):
+            return DownloadStatus.COMPLETED.value
+
         if not movie.have_mg or not movie.magnets:
             return DownloadStatus.NO_SOURCE.value
 

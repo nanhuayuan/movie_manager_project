@@ -16,3 +16,9 @@ class EverythingService:
         except Exception as e:
             self.logger.error(f"Error searching Everything for movie {movie_title}: {str(e)}")
             return False
+
+    def local_exists_movie(self, serial_number: str):
+
+        # 本地存在的，才叫存在
+        # everything检查本地是否存在
+        return self.check_movie_exists(serial_number)

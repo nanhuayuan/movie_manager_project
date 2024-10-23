@@ -40,24 +40,12 @@ class MovieService(BaseService[Movie, MovieDAO]):
         criteria = {'serial_number': serial_number}
         return self.dao.find_one_by_criteria(criteria)
 
-    def exists_movie(self, serial_number: str):
+    def jellyfin_exists_movie(self, serial_number: str):
         # jellyfin是否存在
-        jellyfin_exists = self.jellyfin_service.check_movie_exists(serial_number)
+        return self.jellyfin_service.check_movie_exists(serial_number)
 
-        if jellyfin_exists:
-            info("serial_number:{} 存在jellyfin", serial_number)
-        else:
-            info("serial_number:{} 不存在jellyfin", serial_number)
 
-        # 本地存在的，才叫存在
-        # everything检查本地是否存在
-        everything_exists = self.everything_service.check_movie_exists(serial_number)
-        if everything_exists:
-            info("serial_number:{} 存在本地文件", serial_number)
-        else:
-            info("serial_number:{} 不存在本地文件", serial_number)
 
-        return everything_exists
 
 
     # ------------------use end----------------------
