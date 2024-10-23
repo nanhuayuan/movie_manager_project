@@ -49,7 +49,8 @@ class ScraperService:
             MovieService, ActorService, StudioService, DirectorService,
             GenreService, MagnetService, SeriesService, LabelService,
             ChartService, ChartTypeService, ChartEntryService,
-            DownloadService, CacheService,EverythingService
+            DownloadService, CacheService,EverythingService,
+            JellyfinService
         )
 
         services = {
@@ -66,7 +67,8 @@ class ScraperService:
             'chart_entry': ChartEntryService,
             'download': DownloadService,
             'cache': CacheService,
-            'everything': EverythingService
+            'everything': EverythingService,
+            'jellyfin': JellyfinService
         }
 
         for name, service_class in services.items():
@@ -91,12 +93,11 @@ class ScraperService:
     def _process_chart(self, chart: Chart):
         """处理单个榜单及其条目"""
         info(f"处理榜单: {chart.name}")
-
-        # 处理榜单类型
-        chart = self._process_chart_type(chart)
-
         # 处理榜单条目
         for entry in chart.entries:
+            # 处理榜单类型,每次都要重新获取，处理（第一次会插入）
+            chart = self._process_chart_type(chart)
+
             entry.chart = chart
             try:
                 self._process_chart_entry(entry)
@@ -137,7 +138,7 @@ class ScraperService:
 
             # 更新榜单条目
             chart_entry.movie = movie
-            self.chart_entry_service.create(chart_entry)
+            result = self.chart_entry_service.create(chart_entry)
 
             info(f"榜单条目处理成功: {chart_entry.serial_number}")
 
@@ -242,7 +243,7 @@ class ScraperService:
         cached = self.cache_service.get(cache_key)
         if cached:
             # 使用类型(type)来调用classmethod
-            entity.id =  type(entity).from_dict(cached)
+            entity.id =  type(entity).from_dict(cached).id
         else:
             # 查询数据库
             db_entity = service.get_by_name(entity.name)
@@ -255,7 +256,7 @@ class ScraperService:
     def _process_movie_download(self, movie: Movie) -> int:
         """处理电影下载状态"""
 
-        if self.movie_service.jellyfin_service.file_exists(movie.serial_number):
+        if self.jellyfin_service.check_movie_exists(title=movie.serial_number):
             return DownloadStatus.IN_LIBRARY.value
         elif self.everything_service.local_exists_movie(movie.serial_number):
             return DownloadStatus.COMPLETED.value

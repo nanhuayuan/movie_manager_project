@@ -4,14 +4,14 @@ database:
   dbname: movie
 
 jellyfin:
-  api_url: "http://qnap.nas.com:8096"
+  api_url: "http://192.168.31.45:8096"
   api_key: "8fa1a15a2a484d6fb86167cd31b3cef2"
   user_id: 'b128da17dbf5412bac37c096e25f2de5'
   item_id: 'ab532873de6a4fcd09ca15f5d59cd55a'
   playlists_id: '953141ca3d64b4e0bf3ff52b29bcbbab'
 
 download_client:
-  host: "qnap.nas.com"
+  host: "192.168.31.45"
   port: 6363
   type: "qBittorrent"
   password: "adminadmin"

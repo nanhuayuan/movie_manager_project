@@ -21,4 +21,4 @@ class EverythingService:
 
         # 本地存在的，才叫存在
         # everything检查本地是否存在
-        return self.check_movie_exists(serial_number)
+        return self.file_exists(serial_number)

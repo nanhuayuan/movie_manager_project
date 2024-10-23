@@ -12,6 +12,7 @@ from .chart_entry_service import ChartEntryService
 from .download_service import DownloadService
 from .cache_service import CacheService
 from .everything_service import EverythingService
+from .jellyfin_service import JellyfinService
 
 __all__ = [
     'MovieService', 'ActorService', 'StudioService', 'DirectorService',
