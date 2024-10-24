@@ -1,10 +1,8 @@
 # coding: utf-8
+from datetime import datetime, time, date
 from decimal import Decimal
 
-from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import Column, Integer, String, Date, DateTime, Float, ForeignKey, BigInteger
 from app.utils.db_util import db
-from datetime import datetime, time, date
 
 
 class DBBaseModel(db.Model):
@@ -73,10 +71,7 @@ class ChartEntry(DBBaseModel):
     __table_args__ = {'comment': '榜单条目表'}
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True, comment='自增主键Id')
-    #name = db.Column(db.String(256, 'utf8mb4_unicode_ci'), nullable=False, server_default=db.text("''"), comment='榜单名称')
     chart_id = db.Column(db.Integer, db.ForeignKey('chart.id'), nullable=False, comment='榜单Id，关联chart')
-    # chart_id = db.Column(db.Integer, nullable=False, comment='榜单Id，关联chart')
-    #movie_id = db.Column(db.Integer, nullable=False, comment='电影Id，关联movie')
     movie_id = db.Column(db.Integer, db.ForeignKey('movie.id'), nullable=False, server_default=db.text("'0'"), comment='电影Id，关联movie')
     rank = db.Column(db.Integer, nullable=False, server_default=db.text("'0'"), comment='电影在榜单中的排名')
     score = db.Column(db.Float(4), nullable=False, server_default=db.text("'0.00'"), comment='电影评分')
@@ -100,16 +95,12 @@ class ChartEntry(DBBaseModel):
     uri = ""
     actor_list = []
     magnet_list = []
-
-    # 排序
-
     # 看过人数
     number_of_viewers = 0
     # 想看人数
     number_of_want_to = 0
     # 热度
     popularity = 0
-    #
     serial_number = ''
 
 class ChartHistory(DBBaseModel):
@@ -502,42 +493,3 @@ class Studio(DBBaseModel):
                            server_default=db.text("CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"),
                            comment='更新时间')
     movies = db.relationship("Movie", back_populates="studio")
-
-
-
-
-
-"""
-
-# 多对多关系表
-movie_director = db.Table('movie_director',
-    db.Column('id', Integer, primary_key=True, autoincrement=True),
-    db.Column('movie_id', Integer, ForeignKey('movie.id')),
-    db.Column('director_id', Integer, ForeignKey('director.id'))
-)
-
-movie_genre = db.Table('movie_genre',
-    db.Column('id', Integer, primary_key=True, autoincrement=True),
-    db.Column('movie_id', Integer, ForeignKey('movie.id')),
-    db.Column('genre_id', Integer, ForeignKey('genre.id'))
-)
-
-movie_label = db.Table('movie_label',
-    db.Column('id', Integer, primary_key=True, autoincrement=True),
-    db.Column('movie_id', Integer, ForeignKey('movie.id')),
-    db.Column('label_id', Integer, ForeignKey('label.id'))
-)
-
-movie_series = db.Table('movie_series',
-    db.Column('id', Integer, primary_key=True, autoincrement=True),
-     db.Column('movie_id', Integer, ForeignKey('movie.id')),
-     db.Column('series_id', Integer, ForeignKey('series.id'))
-)
-
-
-movie_actor = db.Table('movie_actor',
-    db.Column('id', Integer, primary_key=True, autoincrement=True),
-    db.Column('movie_id', Integer, ForeignKey('movie.id')),
-    db.Column('actor_id', Integer, ForeignKey('actor.id'))
-)
-"""
