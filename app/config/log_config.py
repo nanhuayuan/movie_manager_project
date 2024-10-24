@@ -7,57 +7,37 @@ from pathlib import Path
 from typing import Any, Dict
 
 import yaml
-
 from app.config.base_config import BaseConfig
 
 
-class LogConfig(BaseConfig):
-    """日志配置类，负责加载和管理日志配置"""
+class ImmediateStreamHandler(logging.StreamHandler):
+    """确保立即刷新的流处理器"""
 
+    def __init__(self):
+        super().__init__(sys.stdout)
+        # 设置stream为无缓冲模式
+        try:
+            self.stream.reconfigure(line_buffering=True)  # Python 3.7+
+        except AttributeError:
+            self.stream = os.fdopen(self.stream.fileno(), 'w', 1)
+
+    def emit(self, record):
+        """重写emit确保立即输出"""
+        try:
+            msg = self.format(record)
+            self.stream.write(msg + self.terminator)
+            self.stream.flush()  # 立即刷新缓冲区
+        except Exception:
+            self.handleError(record)
+
+
+class LogConfig(BaseConfig):
     def __init__(self):
         super().__init__()
         self._load_config('logging')
 
 
-class ImmediateFormatter(logging.Formatter):
-    """
-    实时输出的日志格式化器
-    确保每条日志立即刷新输出
-    """
-
-    def __init__(self, fmt=None, datefmt=None):
-        super().__init__(fmt, datefmt)
-
-    def format(self, record):
-        formatted_message = super().format(record)
-        # 确保每条日志后都刷新输出
-        sys.stdout.flush()
-        sys.stderr.flush()
-        return formatted_message
-
-
-class ImmediateStreamHandler(logging.StreamHandler):
-    """
-    立即输出的流处理器
-    重写emit方法确保实时输出
-    """
-
-    def emit(self, record):
-        try:
-            msg = self.format(record)
-            stream = self.stream
-            # 写入消息并立即刷新
-            stream.write(msg + self.terminator)
-            stream.flush()
-        except Exception:
-            self.handleError(record)
-
-
 class LogUtil:
-    """
-    日志工具类，实现单例模式
-    负责初始化日志系统，提供日志记录接口
-    """
     _instance = None
 
     def __new__(cls):
@@ -68,78 +48,57 @@ class LogUtil:
         return cls._instance
 
     def _setup_logging(self):
-        """
-        设置日志系统，包括:
-        1. 处理日志路径
-        2. 配置控制台实时输出
-        3. 验证配置完整性
-        """
-        # 先注册自定义的Formatter
-        logging.setLoggerClass(logging.Logger)
-        logging.setLogRecordFactory(logging.LogRecord)
+        """设置日志系统"""
+        # 确保在配置前注册自定义的Handler类
+        logging.ImmediateStreamHandler = ImmediateStreamHandler
 
         logging_config = self._config.config
         self._process_log_paths(logging_config)
         self._configure_immediate_console_output(logging_config)
 
-        self._validate_logging_config(logging_config)
-        logging.config.dictConfig(logging_config)
+        try:
+            logging.config.dictConfig(logging_config)
+        except ValueError as e:
+            print(f"日志配置错误: {e}")
+            raise
 
     def _configure_immediate_console_output(self, config: Dict[str, Any]):
-        """
-        配置控制台处理器实现实时输出
-        使用简单的配置确保实时显示
-        """
-        # 确保formatters部分存在
+        """配置控制台实时输出"""
+        # 配置formatter
         if 'formatters' not in config:
             config['formatters'] = {}
 
-        # 使用标准的formatter配置
         config['formatters']['console'] = {
             'format': '%(asctime)s - %(levelname)s - [%(name)s] - %(message)s',
             'datefmt': '%Y-%m-%d %H:%M:%S'
         }
 
-        # 配置console handler
-        console_handler = config.get('handlers', {}).get('console', {})
-        if console_handler:
-            console_handler.update({
-                'class': 'logging.StreamHandler',
-                'formatter': 'console',
-                'stream': 'ext://sys.stderr',  # 使用stderr
-                'level': 'DEBUG'  # 确保能看到所有级别的日志
-            })
+        # 配置实时输出的console handler
+        if 'handlers' not in config:
+            config['handlers'] = {}
 
-        # 确保root logger的级别设置正确
-        if 'root' not in config:
-            config['root'] = {}
-        config['root']['level'] = 'DEBUG'
-
-    def _validate_logging_config(self, config: Dict[str, Any]) -> None:
-        """
-        验证日志配置的完整性
-        检查所有必需的配置项是否存在
-        """
-        required_handler_keys = {
-            'console': ['class', 'formatter', 'level'],
-            'file': ['class', 'formatter', 'level', 'filename'],
-            'error_file': ['class', 'formatter', 'level', 'filename']
+        config['handlers']['console'] = {
+            'class': 'logging.ImmediateStreamHandler',  # 修改这里，使用注册后的类名
+            'level': 'DEBUG',
+            'formatter': 'console'
         }
 
-        for handler_name, required_keys in required_handler_keys.items():
-            handler_config = config.get('handlers', {}).get(handler_name, {})
-            missing_keys = [key for key in required_keys if key not in handler_config]
-            if missing_keys:
-                raise ValueError(f"处理器 '{handler_name}' 缺少必需的配置项: {missing_keys}")
+        # 确保root logger配置正确
+        if 'root' not in config:
+            config['root'] = {}
+
+        config['root'].update({
+            'level': 'DEBUG',
+            'handlers': ['console']
+        })
+
+        # 确保version字段存在
+        config['version'] = 1
+        config['disable_existing_loggers'] = False
 
     def _process_log_paths(self, config: Dict[str, Any]):
-        """
-        处理日志文件路径:
-        1. 优先使用配置文件中指定的日志目录
-        2. 如果是相对路径，则相对于项目根目录
-        3. 如果未指定，则使用项目根目录下的默认logs目录
-        """
-        # 获取项目根目录（查找到包含 config 目录的父目录）
+        """处理日志文件路径"""
+        # 获取项目根目录
         current_dir = Path(__file__).resolve()
         project_root = None
         for parent in current_dir.parents:
@@ -150,25 +109,22 @@ class LogUtil:
         if not project_root:
             raise ValueError("无法找到项目根目录")
 
-        # 获取配置中的日志目录，如果没有配置则使用默认值
+        # 获取日志目录
         log_directory = config.get('log_directory', 'logs')
-
-        # 处理日志目录路径
         log_dir = Path(log_directory)
+
         if not log_dir.is_absolute():
-            # 如果是相对路径，则相对于项目根目录
             log_dir = project_root / log_directory
 
         # 确保日志目录存在
         log_dir.mkdir(parents=True, exist_ok=True)
 
-        # 更新配置中的日志目录为绝对路径
+        # 更新配置中的日志路径
         config['log_directory'] = str(log_dir)
 
         # 处理所有处理器的文件路径
         for handler_name, handler in config.get('handlers', {}).items():
             if 'filename' in handler:
-                # 如果处理器的文件名是相对路径，则相对于日志目录
                 filename = Path(handler['filename'])
                 if not filename.is_absolute():
                     log_path = log_dir / filename
@@ -179,35 +135,29 @@ class LogUtil:
     @staticmethod
     def get_logger(name=None):
         """获取logger实例"""
-        logger = logging.getLogger(name)
-        return logger
+        return logging.getLogger(name)
 
 
-# 创建全局日志工具实例
+# 创建全局日志实例
 logger = LogUtil().get_logger()
 
 
-# 提供便捷的日志记录函数
+# 便捷的日志记录函数
 def debug(msg, *args, **kwargs):
-    """记录debug级别日志"""
     logger.debug(msg, *args, **kwargs)
 
 
 def info(msg, *args, **kwargs):
-    """记录info级别日志"""
     logger.info(msg, *args, **kwargs)
 
 
 def warning(msg, *args, **kwargs):
-    """记录warning级别日志"""
     logger.warning(msg, *args, **kwargs)
 
 
 def error(msg, *args, **kwargs):
-    """记录error级别日志"""
     logger.error(msg, *args, **kwargs)
 
 
 def critical(msg, *args, **kwargs):
-    """记录critical级别日志"""
     logger.critical(msg, *args, **kwargs)
