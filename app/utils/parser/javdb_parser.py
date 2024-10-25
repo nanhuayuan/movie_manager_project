@@ -50,6 +50,7 @@ class JavdbParser(BaseMovieParser):
                 if len(title_parts) >= 2:
                     movie.serial_number = title_parts[0]
                     movie.title = title_parts[1]
+                    movie.name = title_parts[1]
                     debug(f"解析到番号:{movie.serial_number}, 标题:{movie.title}")
 
             # 解析面板信息

@@ -14,7 +14,7 @@ class ChartEntryService(BaseService[ChartEntry, ChartEntryDAO]):
         super().__init__()
         info("ChartEntryService initialized")
 
-    def get_chart_entry_by_movie_id_and_chart_id(self, chart_id: int, movie_id: int) -> Optional[ChartEntry]:
+    def get_by_chart_and_movie(self, chart_id: int, movie_id: int) -> Optional[ChartEntry]:
         """
         根据榜单ID和电影ID获取榜单条目（每个电影只可能有一个榜单）
         Args:
