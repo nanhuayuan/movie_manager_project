@@ -1,21 +1,29 @@
 import asyncio
 from typing import List, Optional, Dict, Any
+from bs4 import BeautifulSoup
 from datetime import datetime
+from contextlib import contextmanager
 
 from app.config.app_config import AppConfig
-from app.model.db.movie_model import Movie, Chart, ChartEntry, ChartType, db
+from app.model.db.movie_model import Movie, Chart, ChartEntry, ChartType
 from app.services.base_service import BaseService
+from app.utils.download_client import DownloadStatus
 from app.utils.http_util import HttpUtil
+from app.utils.page_parser_util import PageParserUtil
 from app.utils.parser.parser_factory import ParserFactory
 from app.config.log_config import debug, info, error
 
 
 class ScraperService:
-    """电影数据爬取服务"""
+    """电影数据爬取服务
 
-    # 缓存配置：(前缀, 过期时间)
+    负责从网页抓取电影信息、处理榜单数据等核心功能。
+    实现了缓存机制以提升性能。
+    """
+
+    # 缓存配置
     CACHE_CONFIG = {
-        'movie': ('movie:', 24 * 3600),
+        'movie': ('movie:', 24 * 3600),  # 24小时
         'actor': ('actor:', 24 * 3600),
         'director': ('director:', 24 * 3600),
         'series': ('series:', 24 * 3600),
@@ -25,20 +33,24 @@ class ScraperService:
     }
 
     def __init__(self):
+        """初始化配置与服务"""
+        self._initialize_config()
+        self._initialize_services()
+        self._initialize_utils()
+
+    def _initialize_config(self):
+        """初始化配置"""
         self.config = AppConfig().get_web_scraper_config()
         self.base_url = self.config.get('javdb_url', "https://javdb.com")
-        self._initialize_services()
-        self.http_util = HttpUtil()
-        self.parser = ParserFactory.get_parser()
-        self._entity_cache = {}
 
     def _initialize_services(self):
-        """初始化所有相关服务"""
+        """初始化所需服务"""
         from app.services import (
             MovieService, ActorService, StudioService, DirectorService,
             GenreService, MagnetService, SeriesService, LabelService,
             ChartService, ChartTypeService, ChartEntryService,
-            DownloadService, CacheService
+            DownloadService, CacheService,EverythingService,
+            JellyfinService
         )
 
         services = {
@@ -54,84 +66,128 @@ class ScraperService:
             'chart_type': ChartTypeService,
             'chart_entry': ChartEntryService,
             'download': DownloadService,
-            'cache': CacheService
+            'cache': CacheService,
+            'everything': EverythingService,
+            'jellyfin': JellyfinService
         }
 
         for name, service_class in services.items():
             setattr(self, f'{name}_service', service_class())
 
+    def _initialize_utils(self):
+        """初始化工具类"""
+        self.http_util = HttpUtil()
+        self.page_parser = PageParserUtil()
+        self.parser = ParserFactory.get_parser()
+
     def process_charts(self):
         """处理所有榜单数据"""
         info("开始处理榜单数据")
-        self._entity_cache.clear()
+        chart_list = self.chart_service.parse_local_chartlist()
 
-        try:
-            chart_list = self.chart_service.parse_local_chartlist()
-            chart_type = self._get_or_create_chart_type()
+        for chart in chart_list:
+            self._process_chart(chart)
 
-            for chart in chart_list:
-                self._process_chart(chart, chart_type)
-                db.session.commit()
+        info("榜单处理完成")
 
-            info("榜单处理完成")
-        except Exception as e:
-            db.session.rollback()
-            error(f"处理榜单时出错: {str(e)}")
-            raise
-
-    def _get_or_create_chart_type(self) -> ChartType:
-        """获取或创建榜单类型"""
-        chart_type = self.chart_type_service.get_current_chart_type()
-        db_type = self.chart_type_service.get_by_name(chart_type.name)
-        if not db_type:
-            db.session.add(chart_type)
-            db.session.flush()
-            db_type = chart_type
-        return db_type
-
-    def _process_chart(self, chart: Chart, chart_type: ChartType):
+    def _process_chart(self, chart: Chart):
         """处理单个榜单及其条目"""
         info(f"处理榜单: {chart.name}")
-
-        chart.chart_type = chart_type
-        db_chart = self._get_or_create_chart(chart)
-
-        for entry in chart.entries:
-            self._process_chart_entry(entry, db_chart)
-            db.session.flush()
-
-    def _get_or_create_chart(self, chart: Chart) -> Chart:
-        """获取或创建榜单"""
-        db_chart = self.chart_service.get_by_name(chart.name)
-        if not db_chart:
-            db.session.add(chart)
-            db.session.flush()
-            db_chart = chart
-        return db_chart
-
-    def _process_chart_entry(self, entry: ChartEntry, chart: Chart):
-        """处理榜单条目"""
-        info(f"处理榜单条目: {entry.serial_number}")
-
-        # 获取电影详情
-        movie_data = self._get_movie_info(entry.serial_number)
-        if not movie_data:
-            return
-
-        # 处理电影及其关联实体
-        db_movie = self._process_movie(movie_data)
-        if not db_movie:
-            return
-
         # 处理榜单条目
-        entry.chart = chart
-        entry.movie = db_movie
-        self._create_or_update_chart_entry(entry)
+        for entry in chart.entries:
+            # 处理榜单类型,每次都要重新获取，处理（第一次会插入）
+            chart = self._process_chart_type(chart)
 
-    def _get_movie_info(self, serial_number: str) -> Optional[Movie]:
-        """获取电影详情页面信息"""
+            entry.chart = chart
+            try:
+                self._process_chart_entry(entry)
+            except Exception as e:
+                error(f"处理榜单条目失败: {str(e)}")
+                continue
+
+    def _process_chart_type(self, chart: Chart) -> Chart:
+        """处理榜单类型"""
+        chart_from_db = self.chart_service.get_by_name(chart.name)
+        if chart_from_db:
+            chart.id = chart_from_db.id
+
+        default_type = self.chart_type_service.get_current_chart_type()
+        type_from_db = self.chart_type_service.get_by_name(default_type.name)
+        chart.chart_type = type_from_db or default_type
+
+        return chart
+
+    def _process_chart_entry(self, chart_entry: ChartEntry):
+        """处理单个榜单条目
+
+        Args:
+            chart_entry: 榜单条目实体
+        """
+        try:
+            # 解析电影信息
+            movie = self._parse_movie(chart_entry.serial_number)
+            if not movie:
+                error(f"获取电影信息失败: {chart_entry.serial_number}")
+                return
+
+            # 处理关联实体
+            self._process_related_entities(movie)
+
+            # 处理下载状态
+            movie.download_status = self._process_movie_download(movie)
+
+            # 更新榜单条目
+            chart_entry.movie = movie
+            result = self.chart_entry_service.create(chart_entry)
+
+            info(f"榜单条目处理成功: {chart_entry.serial_number}")
+
+        except Exception as e:
+            error(f"处理榜单条目失败 {chart_entry.serial_number}: {str(e)}")
+            raise
+
+    def _parse_movie(self, serial_number: str) -> Optional[Movie]:
+        """解析电影信息
+
+        Args:
+            serial_number: 电影番号
+
+        Returns:
+            解析后的电影实体
+        """
+        # 获取页面URL
+        url = self._get_movie_page_url(serial_number)
+        if not url:
+            error(f"获取电影页面URL失败: {serial_number}")
+            return None
+
+        # 解析电影信息
+        soup = self.http_util.request(url=url, proxy_enable=self.config['proxy_enable'])
+        if not soup:
+            return None
+
+        movie = self.parser.parse_movie_details_page(soup)
+
+        # 检查缓存
+        cache_key = f"movie:{serial_number}"
+        cached_movie = self.cache_service.get(cache_key)
+        if cached_movie:
+            movie.id = Movie.from_dict(cached_movie).id
+        else:
+            # 处理数据库已有记录
+            movie_from_db = self.movie_service.get_movie_from_db_by_serial_number(serial_number)
+            if movie_from_db:
+                movie.id = movie_from_db.id
+                # 更新缓存
+                self.cache_service.set(cache_key, movie.to_dict(), self.CACHE_CONFIG['movie'][1])
+        return movie
+
+    def _get_movie_page_url(self, serial_number: str) -> Optional[str]:
+        """获取电影页面URL"""
+        # 搜索获取URL
         search_url = f'{self.base_url}/search?q={serial_number}&f=all'
         soup = self.http_util.request(url=search_url, proxy_enable=self.config["proxy_enable"])
+
         if not soup:
             return None
 
@@ -139,148 +195,84 @@ class ScraperService:
         if not results:
             return None
 
-        detail_url = f'{self.base_url}{results[0].uri}'
-        soup = self.http_util.request(url=detail_url, proxy_enable=self.config['proxy_enable'])
-        return self.parser.parse_movie_details_page(soup) if soup else None
+        return f'{self.base_url}{results[0].uri}'
 
-    def _process_movie(self, movie: Movie) -> Optional[Movie]:
-        """处理电影及其关联实体"""
-        # 先检查缓存和数据库
-        db_movie = self._get_cached_or_db_movie(movie.serial_number)
-
-        if db_movie:
-            # 更新现有电影信息
-            self._update_movie_relations(db_movie, movie)
-            return db_movie
-        else:
-            # 创建新电影及其关联
-            return self._create_new_movie(movie)
-
-    def _get_cached_or_db_movie(self, serial_number: str) -> Optional[Movie]:
-        """从缓存或数据库获取电影"""
-        cache_key = f"movie:{serial_number}"
-
-        # 检查内存缓存
-        if cached := self._entity_cache.get(cache_key):
-            return cached
-
-        # 检查Redis缓存
-        if redis_cached := self.cache_service.get(cache_key):
-            movie = Movie.from_dict(redis_cached)
-            self._entity_cache[cache_key] = movie
-            return movie
-
-        # 从数据库获取
-        return self.movie_service.get_movie_from_db_by_serial_number(serial_number)
-
-    def _update_movie_relations(self, db_movie: Movie, new_movie: Movie):
-        """更新电影关联信息"""
-        # 更新基本属性
-        for attr in ['name', 'title', 'pic_cover', 'release_date', 'length',
-                     'have_mg', 'have_file', 'have_hd', 'have_sub']:
-            if hasattr(new_movie, attr):
-                setattr(db_movie, attr, getattr(new_movie, attr))
-
-        # 更新制作商
-        if new_movie.studio:
-            studio = self._get_or_create_entity(new_movie.studio, self.studio_service)
-            db_movie.studio = studio
-
-        # 更新其他关联实体
-        relations = {
-            'actors': self.actor_service,
-            'directors': self.director_service,
-            'genres': self.genre_service,
-            'labels': self.label_service,
-            'series': self.series_service
+    def _process_related_entities(self, movie: Movie):
+        """处理电影相关实体"""
+        entity_mappings = {
+            'studio': (self.studio_service, 'studio', False),
+            'actors': (self.actor_service, 'actor', True),
+            'directors': (self.director_service, 'director', True),
+            'series': (self.series_service, 'series', True),
+            'genres': (self.genre_service, 'genre', True),
+            'labels': (self.label_service, 'label', True)
         }
 
-        for attr, service in relations.items():
-            if new_entities := getattr(new_movie, attr, None):
-                existing = getattr(db_movie, attr)
-                existing_names = {e.name for e in existing}
+        for attr, (service, cache_type, is_list) in entity_mappings.items():
+            if not hasattr(movie, attr):
+                continue
 
-                for entity in new_entities:
-                    if entity.name not in existing_names:
-                        db_entity = self._get_or_create_entity(entity, service)
-                        existing.append(db_entity)
+            entities = getattr(movie, attr)
+            if not entities:
+                continue
 
-        db.session.flush()
+            if is_list:
+                processed = []
+                for entity in entities:
+                    processed_entity = self._process_entity(entity, service, cache_type)
+            else:
+                self._process_entity(entities, service, cache_type)
 
-    def _create_new_movie(self, movie: Movie) -> Movie:
-        """创建新电影及其关联"""
-        # 处理制作商
-        if movie.studio:
-            movie.studio = self._get_or_create_entity(movie.studio, self.studio_service)
+    def _process_entity(self, entity: Any, service: BaseService, cache_type: str) -> Any:
+        """处理单个实体
 
-        # 处理其他关联实体
-        relations = {
-            'actors': self.actor_service,
-            'directors': self.director_service,
-            'genres': self.genre_service,
-            'labels': self.label_service,
-            'series': self.series_service
-        }
+        Args:
+            entity: 实体对象
+            service: 实体对应的服务
+            cache_type: 缓存类型
 
-        for attr, service in relations.items():
-            if entities := getattr(movie, attr, None):
-                setattr(movie, attr, [
-                    self._get_or_create_entity(entity, service)
-                    for entity in entities
-                ])
-
-        db.session.add(movie)
-        db.session.flush()
-        return movie
-
-    def _get_or_create_entity(self, entity: Any, service: BaseService) -> Any:
-        """获取或创建实体（带缓存）"""
+        Returns:
+            处理后的实体
+        """
         if not entity or not entity.name:
+            info(f"实体无效: {entity}")
             return None
 
-        entity_type = service.__class__.__name__.lower().replace('service', '')
-        cache_key = f"{entity_type}:{entity.name}"
-
-        # 检查内存缓存
-        if cached := self._entity_cache.get(cache_key):
-            return cached
-
-        # 检查Redis缓存
-        redis_key = f"{self.CACHE_CONFIG[entity_type][0]}{entity.name}"
-        if redis_cached := self.cache_service.get(redis_key):
-            entity_obj = type(entity).from_dict(redis_cached)
-            self._entity_cache[cache_key] = entity_obj
-            return entity_obj
-
-        # 从数据库获取或创建
-        db_entity = service.get_by_name(entity.name)
-        if not db_entity:
-            # 确保不设置ID，让数据库自动生成
-            entity.id = None
-            db.session.add(entity)
-            db.session.flush()
-            db_entity = entity
-
-        # 更新缓存
-        self._entity_cache[cache_key] = db_entity
-        self.cache_service.set(
-            redis_key,
-            db_entity.to_dict(),
-            self.CACHE_CONFIG[entity_type][1]
-        )
-
-        return db_entity
-
-    def _create_or_update_chart_entry(self, entry: ChartEntry):
-        """创建或更新榜单条目"""
-        existing = self.chart_entry_service.get_by_chart_and_movie(
-            entry.chart.id, entry.movie.id
-        )
-
-        if existing:
-            existing.rank = entry.rank
-            db.session.merge(existing)
+        # 检查缓存
+        cache_key = f"{self.CACHE_CONFIG[cache_type][0]}{entity.name}"
+        cached = self.cache_service.get(cache_key)
+        if cached:
+            # 使用类型(type)来调用classmethod
+            entity.id =  type(entity).from_dict(cached).id
         else:
-            db.session.add(entry)
+            # 查询数据库
+            db_entity = service.get_by_name(entity.name)
+            if db_entity:
+                self.cache_service.set(cache_key, entity.to_dict(), self.CACHE_CONFIG[cache_type][1])
+                entity.id = db_entity.id
 
-        db.session.flush()
+        return entity
+
+    def _process_movie_download(self, movie: Movie) -> int:
+        """处理电影下载状态"""
+
+        if self.jellyfin_service.check_movie_exists(title=movie.serial_number):
+            return DownloadStatus.IN_LIBRARY.value
+        elif self.everything_service.local_exists_movie(movie.serial_number):
+            return DownloadStatus.COMPLETED.value
+
+        if not movie.have_mg or not movie.magnets:
+            return DownloadStatus.NO_SOURCE.value
+
+        status = self.download_service.get_download_status(movie.serial_number)
+
+        # 已完成状态直接返回
+        if status in [DownloadStatus.COMPLETED.value, DownloadStatus.IN_LIBRARY.value]:
+            return status
+
+        # 添加下载任务
+        magnet = movie.magnets[0]
+        if self.download_service.add_download(f"magnet:?xt=urn:btih:{magnet.magnet_xt}"):
+            return DownloadStatus.DOWNLOADING.value
+
+        return DownloadStatus.DOWNLOAD_FAILED.value
