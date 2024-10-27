@@ -1,5 +1,5 @@
 import json
-from typing import List
+from typing import List, Any
 
 from app.dao.magnet_dao import MagnetDAO
 from app.dao.movie_dao import MovieDAO
@@ -11,7 +11,7 @@ from app.services.jellyfin_service import JellyfinService
 from app.utils.redis_client import RedisUtil
 from app.config.log_config import debug, info, warning, error, critical
 from typing import Optional, List
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from datetime import datetime
 
 
@@ -35,7 +35,7 @@ class MovieService(BaseService[Movie, MovieDAO]):
 
         info("MovieService initialized")
 
-    def get_movie_from_db_by_serial_number(self, serial_number: str):
+    def get_movie_from_db_by_serial_number_old(self, serial_number: str):
         # 定义 criteria 字典
         criteria = {'serial_number': serial_number}
         return self.dao.find_one_by_criteria(criteria)
@@ -44,7 +44,22 @@ class MovieService(BaseService[Movie, MovieDAO]):
         # jellyfin是否存在
         return self.jellyfin_service.check_movie_exists(serial_number)
 
+    def get_movie_from_db_by_serial_number(self, serial_number: str,
+                                         options: List[Any] = None) -> Optional[Movie]:
+        """根据番号获取电影信息，支持预加载关联数据"""
+        return self.get_by_field('serial_number', serial_number, options)
 
+    def get_movie_with_relations(self, serial_number: str) -> Optional[Movie]:
+        """获取电影及其所有关联数据"""
+        options = [
+            joinedload(Movie.studio),
+            joinedload(Movie.actors),
+            joinedload(Movie.directors),
+            joinedload(Movie.series),
+            joinedload(Movie.genres),
+            joinedload(Movie.labels)
+        ]
+        return self.get_movie_from_db_by_serial_number(serial_number, options)
 
 
 
