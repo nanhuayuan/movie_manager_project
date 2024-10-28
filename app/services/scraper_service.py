@@ -162,7 +162,7 @@ class ScraperService:
                 joinedload(Movie.studio),
                 joinedload(Movie.actors),
                 joinedload(Movie.directors),
-                joinedload(Movie.series),
+                joinedload(Movie.seriess),
                 joinedload(Movie.genres),
                 joinedload(Movie.labels)
             ]
