@@ -13,6 +13,7 @@ class AppConfig(BaseConfig):
     def get_everything_config(self): return self.config['everything']
     def get_download_client_config(self): return self.config['download_client']
     def get_web_scraper_config(self): return self.config['web_scraper']
+    def get_proxy_config(self): return self.get_web_scraper_config()['proxy']
     def get_chart_config(self): return self.config['chart']
     def get_chart_type_config(self): return self.get_chart_config()['chart_type']
     def get_app_config(self): return self.config['app']

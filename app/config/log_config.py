@@ -1,136 +1,201 @@
-# log_config.py
+# app/config/log_config.py
 import logging
 import logging.config
 import os
 import sys
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, List, Optional
 
-import yaml
 from app.config.base_config import BaseConfig
 
 
 class ImmediateStreamHandler(logging.StreamHandler):
     """确保立即刷新的流处理器"""
 
-    def __init__(self):
-        super().__init__(sys.stdout)
+    def __init__(self, stream=None):
+        # 如果没有指定stream，默认使用stdout
+        if stream is None:
+            stream = sys.stdout
+        super().__init__(stream)
+
         # 设置stream为无缓冲模式
-        try:
-            self.stream.reconfigure(line_buffering=True)  # Python 3.7+
-        except AttributeError:
-            self.stream = os.fdopen(self.stream.fileno(), 'w', 1)
+        if hasattr(stream, 'reconfigure'):  # Python 3.7+
+            stream.reconfigure(line_buffering=True)
+        else:
+            # 对于较老的Python版本
+            import io
+            if isinstance(stream, io.TextIOBase):
+                stream.flush()
+                stream = io.TextIOWrapper(
+                    stream.buffer,
+                    stream.encoding,
+                    line_buffering=True
+                )
+        self.stream = stream
 
     def emit(self, record):
-        """重写emit确保立即输出"""
+        """确保每条日志立即输出"""
         try:
             msg = self.format(record)
-            self.stream.write(msg + self.terminator)
-            self.stream.flush()  # 立即刷新缓冲区
+            stream = self.stream
+            stream.write(msg + self.terminator)
+            self.flush()  # 立即刷新缓冲区
         except Exception:
             self.handleError(record)
 
+    def flush(self):
+        """确保刷新处理"""
+        if self.stream and hasattr(self.stream, "flush"):
+            self.stream.flush()
+
+
+class ProjectPathFinder:
+    """项目路径查找器"""
+
+    # 项目根目录标志文件/目录列表
+    PROJECT_MARKERS: List[str] = [
+        'pyproject.toml',  # Poetry 项目文件
+        'setup.py',  # 传统的 setup.py
+        '.git',  # Git 仓库
+        'requirements.txt',  # 依赖文件
+        'config',  # 配置目录
+        'README.md'  # README 文件
+    ]
+
+    @classmethod
+    def find_project_root(cls, start_path: Optional[Path] = None) -> Path:
+        """
+        查找项目根目录
+
+        Args:
+            start_path: 开始搜索的路径，默认为当前文件所在目录
+
+        Returns:
+            Path: 项目根目录的路径
+
+        Raises:
+            ValueError: 如果找不到项目根目录
+        """
+        if start_path is None:
+            start_path = Path(__file__).resolve().parent
+
+        current_path = start_path
+
+        # 向上查找，直到找到项目根目录或到达根目录
+        while True:
+            # 检查当前目录是否包含项目标志
+            for marker in cls.PROJECT_MARKERS:
+                if (current_path / marker).exists():
+                    return current_path
+
+            # 如果到达根目录仍未找到，则使用工作目录
+            if current_path.parent == current_path:
+                # 如果找不到任何标志，使用当前工作目录
+                working_dir = Path.cwd()
+                print(f"警告: 未找到项目根目录标志，使用当前工作目录: {working_dir}")
+                return working_dir
+
+            # 移动到父目录继续查找
+            current_path = current_path.parent
+
 
 class LogConfig(BaseConfig):
+    """日志配置类"""
+
     def __init__(self):
         super().__init__()
         self._load_config('logging')
 
+    def get_log_directory(self) -> Path:
+        """获取配置的日志目录"""
+        return Path(self.config.get('log_directory', 'logs'))
+
 
 class LogUtil:
     _instance = None
+    _initialized = False
 
     def __new__(cls):
         if cls._instance is None:
             cls._instance = super(LogUtil, cls).__new__(cls)
-            cls._instance._config = LogConfig()
-            cls._instance._setup_logging()
         return cls._instance
+
+    def __init__(self):
+        if not self._initialized:
+            self._config = LogConfig()
+            self._setup_logging()
+            LogUtil._initialized = True
 
     def _setup_logging(self):
         """设置日志系统"""
-        # 确保在配置前注册自定义的Handler类
-        logging.ImmediateStreamHandler = ImmediateStreamHandler
+        # 注册自定义Handler
+        if not hasattr(logging, 'ImmediateStreamHandler'):
+            logging.ImmediateStreamHandler = ImmediateStreamHandler
 
-        logging_config = self._config.config
-        self._process_log_paths(logging_config)
-        self._configure_immediate_console_output(logging_config)
+        config = self._config.config.copy()
+
+        # 找到项目根目录并设置日志目录
+        project_root = ProjectPathFinder.find_project_root()
+        log_dir = project_root / self._config.get_log_directory()
+
+        # 确保日志目录存在
+        log_dir.mkdir(parents=True, exist_ok=True)
+
+        # 更新所有handler的文件路径
+        handlers = config.get('handlers', {})
+        for handler_name, handler_config in handlers.items():
+            if 'filename' in handler_config:
+                filename = Path(handler_config['filename'])
+                if not filename.is_absolute():
+                    abs_path = log_dir / filename
+                    handler_config['filename'] = str(abs_path)
+                    print(f"Handler {handler_name} 的日志文件路径: {abs_path}")
+
+        # 配置控制台输出
+        self._configure_console_handler(config)
 
         try:
-            logging.config.dictConfig(logging_config)
+            logging.config.dictConfig(config)
         except ValueError as e:
-            print(f"日志配置错误: {e}")
+            print(f"日志配置错误: {e}", file=sys.stderr)
             raise
 
-    def _configure_immediate_console_output(self, config: Dict[str, Any]):
-        """配置控制台实时输出"""
-        # 配置formatter
+    def _configure_console_handler(self, config: Dict[str, Any]):
+        """配置控制台处理器"""
+        # 确保基本配置存在
         if 'formatters' not in config:
             config['formatters'] = {}
+        if 'handlers' not in config:
+            config['handlers'] = {}
+        if 'loggers' not in config:
+            config['loggers'] = {}
 
+        # 配置控制台格式化器
         config['formatters']['console'] = {
             'format': '%(asctime)s - %(levelname)s - [%(name)s] - %(message)s',
             'datefmt': '%Y-%m-%d %H:%M:%S'
         }
 
-        # 配置实时输出的console handler
-        if 'handlers' not in config:
-            config['handlers'] = {}
-
+        # 配置控制台处理器
         config['handlers']['console'] = {
-            'class': 'logging.ImmediateStreamHandler',  # 修改这里，使用注册后的类名
-            'level': 'DEBUG',
-            'formatter': 'console'
+            'class': 'logging.ImmediateStreamHandler',
+            'level': 'DEBUG',  # 默认使用DEBUG级别以显示所有日志
+            'formatter': 'console',
+            'stream': 'ext://sys.stdout'
         }
 
-        # 确保root logger配置正确
+        # 确保root logger使用控制台处理器
         if 'root' not in config:
             config['root'] = {}
 
-        config['root'].update({
-            'level': 'DEBUG',
-            'handlers': ['console']
-        })
+        handlers = config['root'].get('handlers', [])
+        if 'console' not in handlers:
+            handlers.append('console')
+            config['root']['handlers'] = handlers
 
-        # 确保version字段存在
+        # 设置基本配置
         config['version'] = 1
         config['disable_existing_loggers'] = False
-
-    def _process_log_paths(self, config: Dict[str, Any]):
-        """处理日志文件路径"""
-        # 获取项目根目录
-        current_dir = Path(__file__).resolve()
-        project_root = None
-        for parent in current_dir.parents:
-            if (parent / 'config').exists():
-                project_root = parent
-                break
-
-        if not project_root:
-            raise ValueError("无法找到项目根目录")
-
-        # 获取日志目录
-        log_directory = config.get('log_directory', 'logs')
-        log_dir = Path(log_directory)
-
-        if not log_dir.is_absolute():
-            log_dir = project_root / log_directory
-
-        # 确保日志目录存在
-        log_dir.mkdir(parents=True, exist_ok=True)
-
-        # 更新配置中的日志路径
-        config['log_directory'] = str(log_dir)
-
-        # 处理所有处理器的文件路径
-        for handler_name, handler in config.get('handlers', {}).items():
-            if 'filename' in handler:
-                filename = Path(handler['filename'])
-                if not filename.is_absolute():
-                    log_path = log_dir / filename
-                else:
-                    log_path = filename
-                handler['filename'] = str(log_path)
 
     @staticmethod
     def get_logger(name=None):
