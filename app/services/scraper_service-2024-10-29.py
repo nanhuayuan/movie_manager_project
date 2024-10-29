@@ -71,12 +71,14 @@ class ScraperService:
 
         # 使用事务处理每个榜单
         for chart in chart_list:
-            chart.chart_type = chart_type
-            self._process_single_chart(chart)
+            self._process_single_chart(chart, chart_type)
 
-    def _process_single_chart(self, chart: Chart):
+    def _process_single_chart(self, chart: Chart, chart_type: ChartType):
         """处理单个榜单"""
         info(f"处理榜单: {chart.name}")
+
+        # 关联榜单类型
+        chart.chart_type = chart_type
 
         # 获取或创建榜单
         db_chart = (self.services['chart'].get_by_name(chart.name) or
@@ -84,10 +86,9 @@ class ScraperService:
 
         # 处理榜单条目
         for entry in chart.entries:
-            entry.chart = db_chart
-            self._process_chart_entry(entry)
+            self._process_chart_entry(entry, db_chart)
 
-    def _process_chart_entry(self, entry: ChartEntry):
+    def _process_chart_entry(self, entry: ChartEntry, db_chart: Chart):
         """处理榜单条目"""
         info(f"处理榜单条目: {entry.serial_number}")
 
@@ -97,11 +98,12 @@ class ScraperService:
             return
 
         # 关联榜单和电影
+        entry.chart = db_chart
         entry.movie = movie
 
         # 更新或创建榜单条目
         existing_entry = self.services['chart_entry'].get_by_chart_and_movie(
-            entry.chart.id, movie.id)
+            db_chart.id, movie.id)
 
         if existing_entry:
             existing_entry.rank = entry.rank
@@ -112,8 +114,8 @@ class ScraperService:
     def _get_or_create_movie(self, serial_number: str) -> Optional[Movie]:
         """获取或创建电影信息"""
         # 检查缓存
-        #if movie := self._get_cached_movie(serial_number):
-        #    return movie
+        if movie := self._get_cached_movie(serial_number):
+            return movie
 
         # 获取电影详情
         movie_info = self._fetch_movie_details(serial_number)

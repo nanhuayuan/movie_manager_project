@@ -177,7 +177,7 @@ class JavdbParser(BaseMovieParser):
                 for series_link in series_links:
                     series = Series()
                     series.name = series_link.text.strip()
-                    movie.series.append(series)
+                    movie.seriess.append(series)
                     debug(f"解析系列: {series.name}")
         except Exception as e:
             warning(f"解析系列信息出错: {str(e)}")
