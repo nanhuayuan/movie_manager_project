@@ -130,9 +130,8 @@ class ScraperService:
                 error(f"获取电影信息失败: {chart_entry.serial_number}")
                 return
 
-            if not movie.id:
-                # 处理关联实体
-                self._process_related_entities(movie)
+            # 处理关联实体
+            self._process_related_entities(movie)
 
             # 处理下载状态
             movie.download_status = self._process_movie_download(movie)
@@ -178,10 +177,9 @@ class ScraperService:
             # 处理数据库已有记录
             movie_from_db = self.movie_service.get_movie_from_db_by_serial_number(serial_number)
             if movie_from_db:
-                # = movie_from_db.id
+                movie.id = movie_from_db.id
                 # 更新缓存
-                movie = movie_from_db
-                #self.cache_service.set(cache_key, movie.to_dict(), self.CACHE_CONFIG['movie'][1])
+                self.cache_service.set(cache_key, movie.to_dict(), self.CACHE_CONFIG['movie'][1])
         return movie
 
     def _get_movie_page_url(self, serial_number: str) -> Optional[str]:
