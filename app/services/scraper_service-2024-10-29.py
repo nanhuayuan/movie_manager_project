@@ -71,14 +71,12 @@ class ScraperService:
 
         # 使用事务处理每个榜单
         for chart in chart_list:
-            self._process_single_chart(chart, chart_type)
+            chart.chart_type = chart_type
+            self._process_single_chart(chart)
 
-    def _process_single_chart(self, chart: Chart, chart_type: ChartType):
+    def _process_single_chart(self, chart: Chart):
         """处理单个榜单"""
         info(f"处理榜单: {chart.name}")
-
-        # 关联榜单类型
-        chart.chart_type = chart_type
 
         # 获取或创建榜单
         db_chart = (self.services['chart'].get_by_name(chart.name) or
@@ -86,9 +84,10 @@ class ScraperService:
 
         # 处理榜单条目
         for entry in chart.entries:
-            self._process_chart_entry(entry, db_chart)
+            entry.chart = db_chart
+            self._process_chart_entry(entry)
 
-    def _process_chart_entry(self, entry: ChartEntry, db_chart: Chart):
+    def _process_chart_entry(self, entry: ChartEntry):
         """处理榜单条目"""
         info(f"处理榜单条目: {entry.serial_number}")
 
