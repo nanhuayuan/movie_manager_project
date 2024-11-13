@@ -9,8 +9,9 @@ from app.services import (
 )
 from app.utils.http_util import HttpUtil
 from app.utils.parser.parser_factory import ParserFactory
-from app.config.log_config import info, error
+from app.config.log_config import info
 from app.config.app_config import AppConfig
+
 
 class ScraperService:
     """电影数据抓取服务"""
@@ -40,22 +41,12 @@ class ScraperService:
     def process_charts(self):
         """处理所有榜单数据"""
         info("开始处理榜单")
-        try:
-            chart_list = self.services['chart'].parse_local_chartlist()
-        except Exception as e:
-            error(f"解析榜单数据时出现错误: {e}")
-            return
-
+        chart_list = self.services['chart'].parse_local_chartlist()
         if not chart_list:
             info("没有找到榜单数据")
             return
 
-        try:
-            chart_type = self.services['chart_type'].get_current_chart_type()
-        except Exception as e:
-            error(f"获取榜单类型时出现错误: {e}")
-            return
-
+        chart_type = self.services['chart_type'].get_current_chart_type()
         if not chart_type:
             info("无法获取榜单类型")
             return
@@ -67,12 +58,8 @@ class ScraperService:
     def _process_single_chart(self, chart: Chart):
         """处理单个榜单"""
         info(f"处理榜单: {chart.name}")
-        try:
-            db_chart = (self.services['chart'].get_by_name(chart.name) or
-                        self.services['chart'].create(chart))
-        except Exception as e:
-            error(f"保存榜单 '{chart.name}' 时出现错误: {e}")
-            return
+        db_chart = (self.services['chart'].get_by_name(chart.name) or
+                    self.services['chart'].create(chart))
 
         for entry in chart.entries:
             entry.chart = db_chart
@@ -86,34 +73,22 @@ class ScraperService:
             return
 
         entry.movie = movie
-        try:
-            existing_entry = self.services['chart_entry'].get_by_chart_and_movie(
-                entry.chart.id, movie.id)
-            if existing_entry:
-                existing_entry.rank = entry.rank
-                self.services['chart_entry'].update(existing_entry)
-            else:
-                self.services['chart_entry'].create(entry)
-        except Exception as e:
-            error(f"保存榜单条目时出现错误: {e}")
+        existing_entry = self.services['chart_entry'].get_by_chart_and_movie(
+            entry.chart.id, movie.id)
+
+        if existing_entry:
+            existing_entry.rank = entry.rank
+            self.services['chart_entry'].update(existing_entry)
+        else:
+            self.services['chart_entry'].create(entry)
 
     def _get_or_create_movie(self, serial_number: str) -> Optional[Movie]:
         """获取或创建电影信息"""
-        try:
-            movie_info = self._fetch_movie_details(serial_number)
-        except Exception as e:
-            error(f"获取电影 '{serial_number}' 详情时出现错误: {e}")
-            return None
-
+        movie_info = self._fetch_movie_details(serial_number)
         if not movie_info:
             return None
 
-        try:
-            processed_movie = self._process_movie_data(movie_info)
-        except Exception as e:
-            error(f"处理电影 '{serial_number}' 数据时出现错误: {e}")
-            return None
-
+        processed_movie = self._process_movie_data(movie_info)
         return processed_movie
 
     def _fetch_movie_details(self, serial_number: str) -> Optional[Movie]:
@@ -138,26 +113,22 @@ class ScraperService:
 
     def _process_movie_data(self, movie: Movie) -> Optional[Movie]:
         """处理电影数据"""
-        try:
-            existing_movie = self.services['movie'].get_movie_from_db_by_serial_number(
-                movie.serial_number,
-                options=[
-                    joinedload(Movie.studio),
-                    joinedload(Movie.actors),
-                    joinedload(Movie.directors),
-                    joinedload(Movie.seriess),
-                    joinedload(Movie.genres),
-                    joinedload(Movie.labels)
-                ]
-            )
+        existing_movie = self.services['movie'].get_movie_from_db_by_serial_number(
+            movie.serial_number,
+            options=[
+                joinedload(Movie.studio),
+                joinedload(Movie.actors),
+                joinedload(Movie.directors),
+                joinedload(Movie.seriess),
+                joinedload(Movie.genres),
+                joinedload(Movie.labels)
+            ]
+        )
 
-            if existing_movie:
-                return self._update_movie(existing_movie, movie)
-            else:
-                return self._create_movie(movie)
-        except Exception as e:
-            error(f"处理电影 '{movie.serial_number}' 数据时出现错误: {e}")
-            return None
+        if existing_movie:
+            return self._update_movie(existing_movie, movie)
+        else:
+            return self._create_movie(movie)
 
     def _update_movie(self, existing_movie: Movie, new_movie: Movie) -> Movie:
         """更新电影信息"""
