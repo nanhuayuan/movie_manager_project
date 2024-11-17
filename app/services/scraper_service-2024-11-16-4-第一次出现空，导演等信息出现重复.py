@@ -25,32 +25,36 @@ class ScraperService:
 
     def _initialize_services(self):
         """初始化相关服务"""
-        """初始化相关服务"""
-        self.movie_service = MovieService()
-        self.actor_service = ActorService()
-        self.studio_service = StudioService()
-        self.director_service = DirectorService()
-        self.genre_service = GenreService()
-        self.series_service = SeriesService()
-        self.label_service = LabelService()
-        self.chart_service = ChartService()
-        self.chart_type_service = ChartTypeService()
-        self.chart_entry_service = ChartEntryService()
+        self.services = {
+            'movie': MovieService(),
+            'actor': ActorService(),
+            'studio': StudioService(),
+            'director': DirectorService(),
+            'genre': GenreService(),
+            'series': SeriesService(),
+            'label': LabelService(),
+            'chart': ChartService(),
+            'chart_type': ChartTypeService(),
+            'chart_entry': ChartEntryService(),
+        }
 
     def process_charts(self):
         """处理所有榜单数据"""
         info("开始处理榜单")
         try:
-            chart_list = self.chart_service.parse_local_chartlist()
-            if not chart_list:
+            charts = self.services['chart'].parse_local_chartlist()
+            if not charts:
                 info("没有找到榜单数据")
                 return
 
-            # 1.将榜单数据转换为列表以避免迭代器消耗问题
-            # charts = list(chart_list)
-            # 2.使用列表复制避免迭代时修改问题
-            for chart in chart_list[:]:
-                # chart.chart_type = chart_type
+            chart_type = self.services['chart_type'].get_current_chart_type()
+            if not chart_type:
+                info("无法获取榜单类型")
+                return
+
+            # 使用列表复制避免迭代时修改问题
+            for chart in charts[:]:
+                chart.chart_type = chart_type
                 self._process_single_chart(chart)
 
         except Exception as e:
@@ -60,13 +64,13 @@ class ScraperService:
         """处理单个榜单数据"""
         info(f"处理榜单: {chart.name}")
         try:
-            # db_chart = (self.chart_service.get_by_name(chart.name) or
-            # self.chart_service.create(chart))
+            db_chart = (self.services['chart'].get_by_name(chart.name) or
+                        self.services['chart'].create(chart))
 
             # 创建entries的副本进行迭代
             entries = list(chart.entries)
             for entry in entries:
-                entry.chart_name = chart.name
+                entry.chart = db_chart
                 self._process_chart_entry(entry)
 
         except Exception as e:
@@ -86,37 +90,15 @@ class ScraperService:
 
     def _save_chart_entry(self, entry: ChartEntry, movie: Movie):
         """保存榜单条目"""
-
-        chart_type = self.chart_type_service.get_current_chart_type()
-        if not chart_type:
-            info("无法获取榜单类型")
-            return
-        db_chart_type = self.chart_type_service.get_by_name(chart_type.name)
-        if db_chart_type:
-            chart_type = db_chart_type
-
-        chart = Chart(name=entry.chart_name, chart_type=chart_type)
-
-        db_chart = self.chart_service.get_by_name(chart.name)
-
         entry.movie = movie
-        if db_chart:
-            # 数据库中存在榜单，添加到榜单关联。
-            existing_entry = self.chart_entry_service.get_by_chart_and_movie(
-                entry.chart.id, movie.id)
-            if existing_entry:
-                if not existing_entry.movie or existing_entry.movie.id != movie.id:
-                    existing_entry.movie
-                    self.chart_entry_service.update(existing_entry)
+        existing_entry = self.services['chart_entry'].get_by_chart_and_movie(
+            entry.chart.id, movie.id)
 
-            else:
-                entry.chart = db_chart
-                self.chart_entry_service.create(entry)
+        if existing_entry:
+            existing_entry.rank = entry.rank
+            self.services['chart_entry'].update(existing_entry)
         else:
-            # 不存在，创建即可
-            # 榜单不存在，就不可能存在条目
-            entry.chart = chart
-            self.chart_entry_service.create(entry)
+            self.services['chart_entry'].create(entry)
 
     def _get_or_create_movie(self, serial_number: str) -> Optional[Movie]:
         """获取或创建电影信息"""
@@ -159,7 +141,7 @@ class ScraperService:
 
     def _get_existing_movie(self, serial_number: str) -> Optional[Movie]:
         """获取已存在的电影信息"""
-        return self.movie_service.get_movie_from_db_by_serial_number(
+        return self.services['movie'].get_movie_from_db_by_serial_number(
             serial_number,
             options=[
                 joinedload(Movie.studio),
@@ -175,16 +157,16 @@ class ScraperService:
         """创建新电影"""
         self._process_relations(movie)
         try:
-            return self.movie_service.create(movie)
+            return self.services['movie'].create(movie)
         except IntegrityError:
-            return self.movie_service.get_movie_from_db_by_serial_number(
+            return self.services['movie'].get_movie_from_db_by_serial_number(
                 movie.serial_number)
 
     def _update_movie(self, existing_movie: Movie, new_movie: Movie) -> Movie:
         """更新电影信息"""
         self._update_basic_info(existing_movie, new_movie)
         self._update_relations(existing_movie, new_movie)
-        return self.movie_service.update(existing_movie)
+        return self.services['movie'].update(existing_movie)
 
     def _update_basic_info(self, existing_movie: Movie, new_movie: Movie):
         """更新电影基本信息"""
@@ -197,14 +179,14 @@ class ScraperService:
     def _process_relations(self, movie: Movie):
         """处理电影关联数据"""
         if movie.studio:
-            movie.studio = self._get_or_create_entity(self.studio_service, movie.studio)
+            movie.studio = self._get_or_create_entity('studio', movie.studio)
 
         relations = {
-            'actors': self.actor_service,
-            'directors': self.director_service,
-            'seriess': self.series_service,
-            'genres': self.genre_service,
-            'labels': self.label_service
+            'actors': self.services['actor'],
+            'directors': self.services['director'],
+            'seriess': self.services['series'],
+            'genres': self.services['genre'],
+            'labels': self.services['label']
         }
 
         for attr_name, service in relations.items():
@@ -218,14 +200,14 @@ class ScraperService:
     def _update_relations(self, existing_movie: Movie, new_movie: Movie):
         """更新电影关联数据"""
         if new_movie.studio:
-            existing_movie.studio = self._get_or_create_entity(self.studio_service, new_movie.studio)
+            existing_movie.studio = self._get_or_create_entity('studio', new_movie.studio)
 
         relations = {
-            'actors': self.actor_service,
-            'directors': self.director_service,
-            'seriess': self.series_service,
-            'genres': self.genre_service,
-            'labels': self.label_service
+            'actors': self.services['actor'],
+            'directors': self.services['director'],
+            'seriess': self.services['series'],
+            'genres': self.services['genre'],
+            'labels': self.services['label']
         }
 
         for attr_name, service in relations.items():
@@ -237,7 +219,7 @@ class ScraperService:
                     if db_entity:
                         existing.append(db_entity)
 
-    def _get_or_create_entity(self, service, entity):
+    def _get_or_create_entity(self, service_name, entity):
         """获取或创建实体"""
-        # service = self.services[service_name] if isinstance(service_name, str) else service_name
+        service = self.services[service_name] if isinstance(service_name, str) else service_name
         return service.get_by_name(entity.name) or service.create(entity)

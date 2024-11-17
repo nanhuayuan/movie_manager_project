@@ -73,6 +73,9 @@ class ChartEntry(DBBaseModel):
 
     uri = ""
     serial_number = ''
+    chart_type_name = ''
+    chart_type_description = ''
+    chart_name = ''
 
 
 class ChartHistory(DBBaseModel):

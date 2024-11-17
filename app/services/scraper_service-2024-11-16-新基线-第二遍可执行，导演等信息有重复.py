@@ -46,11 +46,16 @@ class ScraperService:
                 info("没有找到榜单数据")
                 return
 
+            chart_type = self.chart_type_service.get_current_chart_type()
+            if not chart_type:
+                info("无法获取榜单类型")
+                return
+
             # 1.将榜单数据转换为列表以避免迭代器消耗问题
             # charts = list(chart_list)
             # 2.使用列表复制避免迭代时修改问题
             for chart in chart_list[:]:
-                # chart.chart_type = chart_type
+                chart.chart_type = chart_type
                 self._process_single_chart(chart)
 
         except Exception as e:
@@ -60,13 +65,13 @@ class ScraperService:
         """处理单个榜单数据"""
         info(f"处理榜单: {chart.name}")
         try:
-            # db_chart = (self.chart_service.get_by_name(chart.name) or
-            # self.chart_service.create(chart))
+            db_chart = (self.chart_service.get_by_name(chart.name) or
+                        self.chart_service.create(chart))
 
             # 创建entries的副本进行迭代
             entries = list(chart.entries)
             for entry in entries:
-                entry.chart_name = chart.name
+                entry.chart = db_chart
                 self._process_chart_entry(entry)
 
         except Exception as e:
@@ -86,36 +91,14 @@ class ScraperService:
 
     def _save_chart_entry(self, entry: ChartEntry, movie: Movie):
         """保存榜单条目"""
-
-        chart_type = self.chart_type_service.get_current_chart_type()
-        if not chart_type:
-            info("无法获取榜单类型")
-            return
-        db_chart_type = self.chart_type_service.get_by_name(chart_type.name)
-        if db_chart_type:
-            chart_type = db_chart_type
-
-        chart = Chart(name=entry.chart_name, chart_type=chart_type)
-
-        db_chart = self.chart_service.get_by_name(chart.name)
-
         entry.movie = movie
-        if db_chart:
-            # 数据库中存在榜单，添加到榜单关联。
-            existing_entry = self.chart_entry_service.get_by_chart_and_movie(
-                entry.chart.id, movie.id)
-            if existing_entry:
-                if not existing_entry.movie or existing_entry.movie.id != movie.id:
-                    existing_entry.movie
-                    self.chart_entry_service.update(existing_entry)
+        existing_entry = self.chart_entry_service.get_by_chart_and_movie(
+            entry.chart.id, movie.id)
 
-            else:
-                entry.chart = db_chart
-                self.chart_entry_service.create(entry)
+        if existing_entry:
+            existing_entry.rank = entry.rank
+            self.chart_entry_service.update(existing_entry)
         else:
-            # 不存在，创建即可
-            # 榜单不存在，就不可能存在条目
-            entry.chart = chart
             self.chart_entry_service.create(entry)
 
     def _get_or_create_movie(self, serial_number: str) -> Optional[Movie]:
@@ -239,5 +222,5 @@ class ScraperService:
 
     def _get_or_create_entity(self, service, entity):
         """获取或创建实体"""
-        # service = self.services[service_name] if isinstance(service_name, str) else service_name
+        #service = self.services[service_name] if isinstance(service_name, str) else service_name
         return service.get_by_name(entity.name) or service.create(entity)
