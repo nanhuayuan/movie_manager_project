@@ -263,7 +263,7 @@ class JavdbParser(BaseMovieParser):
             # 解析名称和大小
             name_elem = magnet_elem.select_one('.magnet-name a')
             if name_elem:
-                magnet.name = name_elem.select_one('.name').text.strip()
+                magnet.title = name_elem.select_one('.name').text.strip()
                 size_text = name_elem.select_one('.meta').text.strip()
                 size_match = re.search(r'([\d.]+)([GMK]B)', size_text)
                 if size_match:
@@ -275,6 +275,7 @@ class JavdbParser(BaseMovieParser):
 
             # 解析磁力链接
             magnet_link = magnet_elem.select_one('a')['href']
+            magnet.name = magnet_link
             if magnet_link.startswith('magnet:?xt='):
                 magnet.magnet_xt = magnet_link.split('btih:')[1].split('&')[0]
 

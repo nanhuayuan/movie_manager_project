@@ -139,7 +139,8 @@ class Movie(DBBaseModel, BaseMixin):
 
 class Magnet(DBBaseModel, BaseMixin):
     __tablename__ = 'magnet'
-    magnet_xt = db.Column(db.String(64, 'utf8mb4_unicode_ci'), nullable=False, server_default=db.text("''"))
+    title = db.Column(db.String(1024, 'utf8mb4_unicode_ci'), nullable=False, server_default=db.text("''"))
+    magnet_xt = db.Column(db.String(1024, 'utf8mb4_unicode_ci'), nullable=False, server_default=db.text("''"))
     mid = db.Column(db.String(16, 'utf8mb4_unicode_ci'), db.ForeignKey('movie.id'), nullable=False,
                     server_default=db.text("'0'"))
     censored_id = db.Column(db.String(64, 'utf8mb4_unicode_ci'), server_default=db.text("''"))

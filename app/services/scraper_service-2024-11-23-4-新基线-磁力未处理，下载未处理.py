@@ -6,9 +6,8 @@ from app.model.db.movie_model import Movie, Chart, ChartEntry, ChartType
 from app.services import (
     MovieService, ActorService, StudioService, DirectorService,
     GenreService, SeriesService, LabelService, ChartService,
-    ChartTypeService, ChartEntryService, MagnetService, DownloadService, EverythingService, JellyfinService
+    ChartTypeService, ChartEntryService
 )
-from app.utils.download_client import DownloadStatus
 from app.utils.http_util import HttpUtil
 from app.utils.parser.parser_factory import ParserFactory
 from app.config.log_config import info, error
@@ -32,11 +31,7 @@ class ScraperService:
             'label': LabelService(),
             'chart': ChartService(),
             'chart_type': ChartTypeService(),
-            'chart_entry': ChartEntryService(),
-            'magnet': MagnetService(),
-            'download': DownloadService(),
-            'everything': EverythingService(),
-            'jellyfin': JellyfinService()
+            'chart_entry': ChartEntryService()
         }
 
         self.http_util = HttpUtil()
@@ -45,7 +40,8 @@ class ScraperService:
     def process_all_charts(self):
         """处理所有榜单数据"""
         try:
-            if not (charts := self.service_map['chart'].parse_local_chartlist()):
+            charts = self.service_map['chart'].parse_local_chartlist()
+            if not charts:
                 info("未找到榜单数据")
                 return
 
@@ -60,7 +56,8 @@ class ScraperService:
         try:
             chart_entries = list(chart.entries)
             for entry in chart_entries:
-                if movie := self._fetch_and_process_movie(entry.serial_number):
+                movie = self._fetch_and_process_movie(entry.serial_number)
+                if movie:
                     self._save_chart_entry(entry, movie, chart.name)
         except Exception as e:
             error(f"处理榜单 '{chart.name}' 时出错: {str(e)}")
@@ -69,11 +66,9 @@ class ScraperService:
         """获取并处理电影信息"""
         info(f"正在处理电影: {serial_number}")
         try:
-            if not (movie_info := self._fetch_movie_info(serial_number)):
+            movie_info = self._fetch_movie_info(serial_number)
+            if not movie_info:
                 return None
-
-            # 处理下载状态
-            movie_info.download_status = self._process_movie_download(movie=movie_info)
 
             existing_movie = self._get_existing_movie(serial_number)
             return (
@@ -87,18 +82,20 @@ class ScraperService:
 
     def _fetch_movie_info(self, serial_number: str) -> Optional[Movie]:
         """从网页抓取电影详细信息"""
+        # 搜索电影
         search_url = f'{self.base_url}/search?q={serial_number}&f=all'
-        if not (search_page := self.http_util.request(url=search_url)):
+        search_page = self.http_util.request(url=search_url)
+        if not search_page:
             return None
 
-        if not (search_results := self.parser.parse_search_results(search_page)):
+        search_results = self.parser.parse_search_results(search_page)
+        if not search_results:
             return None
 
+        # 获取详情
         detail_url = f'{self.base_url}{search_results[0].uri}'
-        if not (detail_page := self.http_util.request(url=detail_url)):
-            return None
-
-        return self.parser.parse_movie_details_page(detail_page)
+        detail_page = self.http_util.request(url=detail_url)
+        return self.parser.parse_movie_details_page(detail_page) if detail_page else None
 
     def _get_existing_movie(self, serial_number: str) -> Optional[Movie]:
         """从数据库获取已存在的电影信息"""
@@ -157,8 +154,7 @@ class ScraperService:
             'directors': 'director',
             'seriess': 'series',
             'genres': 'genre',
-            'labels': 'label',
-            'magnets': 'magnet'
+            'labels': 'label'
         }
 
         for attr, service_key in relation_map.items():
@@ -198,8 +194,7 @@ class ScraperService:
             'directors': 'director',
             'seriess': 'series',
             'genres': 'genre',
-            'labels': 'label',
-            'magnets': 'magnet'
+            'labels': 'label'
         }
 
         for attr, service_key in relation_map.items():
@@ -230,38 +225,9 @@ class ScraperService:
         )
 
         # 创建条目（如果不存在）
-        if not (existing_entry := self.service_map['chart_entry'].get_by_chart_and_movie(db_chart.id, movie.id)):
-            entry.movie = movie
+        entry.movie = movie
+        if not self.service_map['chart_entry'].get_by_chart_and_movie(
+            db_chart.id, movie.id
+        ):
             entry.chart = db_chart
             self.service_map['chart_entry'].create(entry)
-        else:
-            if not existing_entry.movie or existing_entry.movie.id != movie.id:
-                existing_entry.movie = movie
-                self.chart_entry_service.update(existing_entry)
-
-    def _process_movie_download(self, movie: Movie) -> int:
-        """处理电影下载状态"""
-        try:
-            if self.service_map['jellyfin'].check_movie_exists(title=movie.serial_number):
-                return DownloadStatus.IN_LIBRARY.value
-            elif self.service_map['everything'].local_exists_movie(movie.serial_number):
-                return DownloadStatus.COMPLETED.value
-
-            if not movie.have_mg or not movie.magnets:
-                return DownloadStatus.NO_SOURCE.value
-
-            status = self.service_map['download'].get_download_status(movie.serial_number)
-
-            # 已完成状态直接返回
-            if status in [DownloadStatus.COMPLETED.value, DownloadStatus.IN_LIBRARY.value]:
-                return status
-
-            # 添加下载任务
-            magnet = movie.magnets[0]
-            if self.service_map['download'].add_download(f"magnet:?xt=urn:btih:{magnet.magnet_xt}"):
-                return DownloadStatus.DOWNLOADING.value
-
-            return DownloadStatus.DOWNLOAD_FAILED.value
-        except Exception as e:
-            error(f"处理电影下载状态时发生错误：{e}")
-            return DownloadStatus.ERROR.value
