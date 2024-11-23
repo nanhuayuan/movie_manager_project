@@ -1,6 +1,4 @@
 # logging-default.yml - 默认配置，包含所有基础设置
-log_directory: logs
-
 version: 1
 disable_existing_loggers: False
 

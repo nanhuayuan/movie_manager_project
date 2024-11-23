@@ -58,7 +58,7 @@ class ProjectPathFinder:
         'setup.py',  # 传统的 setup.py
         '.git',  # Git 仓库
         'requirements.txt',  # 依赖文件
-        'config',  # 配置目录
+        #'config',  # 配置目录
         'README.md'  # README 文件
     ]
 

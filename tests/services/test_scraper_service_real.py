@@ -54,7 +54,7 @@ def scraper_service():
 def test_parse_movie_details_page(app, session, scraper_service):
     with app.app_context():
         info("Starting test: processor")
-        result = scraper_service.process_charts()
+        result = scraper_service.process_all_charts()
         debug(f"processor result: {result}")
 
 # 更多测试用例...

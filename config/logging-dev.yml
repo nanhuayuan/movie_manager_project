@@ -1,15 +1,13 @@
 # logging-dev.yml - 开发环境日志配置
-log_directory: logs/dev
-
 handlers:
   console:
     level: DEBUG
   file:
     level: DEBUG
-    filename: dev-app.log
+    filename: app.log
   error_file:
     level: DEBUG
-    filename: dev-error.log
+    filename: error.log
 
 loggers:
   root:

@@ -1,4 +1,6 @@
 # logging-base.yml - 基础日志配置
+log_directory: logs
+
 version: 1
 disable_existing_loggers: False
 

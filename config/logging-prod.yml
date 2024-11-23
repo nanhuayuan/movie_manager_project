@@ -1,16 +1,14 @@
 # logging-prod.yml - 生产环境日志配置
-log_directory: /var/log/myapp
-
 handlers:
   console:
     level: WARNING
   file:
     level: INFO
-    filename: prod-app.log
+    filename: app.log
     backupCount: 90
   error_file:
     level: ERROR
-    filename: prod-error.log
+    filename: error.log
     backupCount: 90
 
 loggers:

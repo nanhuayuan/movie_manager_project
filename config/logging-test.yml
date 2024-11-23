@@ -1,16 +1,14 @@
 # logging-test.yml - 测试环境日志配置
-log_directory: logs/test
-
 handlers:
   console:
     level: DEBUG
   file:
     level: DEBUG
-    filename: test-app.log
+    filename: app.log
     backupCount: 5
   error_file:
     level: DEBUG
-    filename: test-error.log
+    filename: error.log
     backupCount: 5
 
 loggers:
