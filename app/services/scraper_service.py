@@ -1,3 +1,5 @@
+import time
+import random
 from typing import Optional, List
 from sqlalchemy.orm import joinedload
 from sqlalchemy.exc import IntegrityError
@@ -62,6 +64,7 @@ class ScraperService:
             for entry in chart_entries:
                 if movie := self._fetch_and_process_movie(entry.serial_number):
                     self._save_chart_entry(entry, movie, chart.name)
+                time.sleep(random.randint(20, 60))
         except Exception as e:
             error(f"处理榜单 '{chart.name}' 时出错: {str(e)}")
 

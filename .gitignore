@@ -12,4 +12,7 @@ __pycache__/
 
 # Ignore logs directory and all its contents
 /logs/
+logs/
 *.log
+data/
+/data/
