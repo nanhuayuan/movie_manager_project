@@ -152,7 +152,7 @@ class LogUtil:
                     print(f"Handler {handler_name} 的日志文件路径: {abs_path}")
 
         # 配置控制台输出
-        self._configure_console_handler(config)
+        #self._configure_console_handler(config)
 
         try:
             logging.config.dictConfig(config)
@@ -204,7 +204,7 @@ class LogUtil:
 
 
 # 创建全局日志实例
-logger = LogUtil().get_logger()
+logger = LogUtil().get_logger('fileAndConsole')
 
 
 # 便捷的日志记录函数

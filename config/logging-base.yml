@@ -36,3 +36,8 @@ loggers:
   sqlalchemy:
     handlers: [file]
     propagate: false
+  fileAndConsole:
+    level: DEBUG  # 混合日志级别为DEBUG
+    handlers: [console, file, error_file]
+    qualname: fileAndConsole  # 日志记录器在层级中的名称
+    propagate: false  # 不传播日志消息到父记录器
