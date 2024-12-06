@@ -1,0 +1,53 @@
+# Python日志配置（Logging Configuration）
+# 这是一个详细的日志配置文件，用于配置日志记录器、处理器和格式化器
+version: 1
+# 日志记录器配置（Loggers Configuration）
+# 定义了三个日志记录器：root（根记录器）, file（文件日志）, fileAndConsole（文件和控制台日志）
+loggers:
+  root:
+    level: DEBUG  # 根记录器日志级别为DEBUG
+    handlers:
+      - consoleHandler  # 使用控制台处理器
+
+  file:
+    level: DEBUG  # 文件日志级别为DEBUG
+    handlers:
+      - fileHandler  # 使用文件处理器
+    qualname: file  # 日志记录器在层级中的名称
+    propagate: true  # 允许日志消息传播到父记录器
+
+  fileAndConsole:
+    level: DEBUG  # 混合日志级别为DEBUG
+    handlers:
+      - fileHandler  # 同时使用文件和控制台处理器
+      - consoleHandler
+    qualname: fileAndConsole  # 日志记录器在层级中的名称
+    propagate: false  # 不传播日志消息到父记录器
+
+# 处理器配置（Handlers Configuration）
+# 定义了两个处理器：控制台处理器和文件处理器
+handlers:
+  consoleHandler:
+    class: logging.StreamHandler  # 控制台输出处理器
+    args:
+      - sys.stdout  # 输出到标准输出
+    level: DEBUG
+    formatter: simpleFormatter
+
+  fileHandler:
+    class: logging.handlers.TimedRotatingFileHandler  # 基于时间的文件轮转处理器
+    args:
+      - 'D:\project\movie_manager_project\log\test.log'  # 日志文件路径
+      - 'midnight'  # 每天午夜轮转日志文件
+      - 1  # 保留备份日志文件数量
+      - 30  # 保留30天的日志文件
+      - 'utf-8'  # 文件编码
+    level: DEBUG
+    formatter: simpleFormatter
+
+# 格式化器配置（Formatters Configuration）
+# 定义日志输出的格式
+formatters:
+  simpleFormatter:
+    format: "%(asctime)s - %(module)s - %(thread)d - %(levelname)s : %(message)s"
+    datefmt: "%Y-%m-%d %H:%M:%S"

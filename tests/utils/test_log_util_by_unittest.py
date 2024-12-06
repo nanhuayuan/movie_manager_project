@@ -1,6 +1,7 @@
 # test_something.py
 import os
 import unittest
+from app.config.log_config import info, error
 
 
 class TestYourCode(unittest.TestCase):
@@ -13,5 +14,4 @@ class TestYourCode(unittest.TestCase):
         os.environ.pop('TESTING', None)
 
     def test_something(self):
-        from app.config.log_config import logger
-        logger.info("This should appear in console")
+        info("This should appear in console")
