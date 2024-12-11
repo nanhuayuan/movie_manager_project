@@ -32,24 +32,24 @@ web_scraper:
     enable: True
     host: 127.0.0.1
     port: 7890
-    api_port: 64090
+    api_port: 59587
     secret: eb1dd2b3-975d-423f-81c9-3ee7e0551c31
     selector: Proxy # 策略组？
 
 
 download_client:
   type: "qBittorrent"
-  host: "localhost"
+  host: "192.168.1.9"
   port: 8080
   username: "admin"
   max_retry_attempts: 10
 
 chart:
   chart_list_path: "data/chart_list/"
-  markdown_reader: top_250 # normal or top_250
+  markdown_reader: normal # normal or top_250
   chart_type:
-    name: javdb_top2502 # javdb_top2502 or javbus
-    description: 'come from javdb' # come from javbus
+    name: javbus # javdb_top2502 or javbus
+    description: 'come from javbus' # come from javbus
 
 app:
   name: MovieListDownloader

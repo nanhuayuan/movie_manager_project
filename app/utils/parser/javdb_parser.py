@@ -49,9 +49,9 @@ class JavdbParser(BaseMovieParser):
                 title_parts = [text.strip() for text in title_elem.stripped_strings]
                 if len(title_parts) >= 2:
                     movie.serial_number = title_parts[0]
-                    movie.title = title_parts[1]
-                    movie.name = title_parts[1]
-                    debug(f"解析到番号:{movie.serial_number}, 标题:{movie.title}")
+                    movie.title = title_parts[-1]
+                    movie.name = title_parts[-1]
+                    debug(f"解析到番号:{movie.serial_number}, 标题:{movie.title}, 名称:{movie.name}")
 
             # 解析面板信息
             panel_blocks = soup.select('.movie-panel-info .panel-block')

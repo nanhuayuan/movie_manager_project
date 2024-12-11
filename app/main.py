@@ -1,5 +1,7 @@
 from flask import Flask
-
+from app.config.log_config import info, error, debug
+import os
+from app.utils.db_util import init_app
 from app import controllers, services
 from app.config.app_config import AppConfig
 from app.container import Container
@@ -9,7 +11,7 @@ from flask import Flask
 from dependency_injector import containers, providers
 
 
-def create_app():
+def create_app(config_name=None):
     """
     创建并配置Flask应用实例。
 
@@ -21,6 +23,10 @@ def create_app():
 
     :return: 配置好的Flask应用实例
     """
+    # 如果没有指定配置名，则从环境变量获取
+    if config_name is None:
+        config_name = os.getenv('APP_ENV', 'dev')
+    info(f"应用启动，当前环境：{config_name}")
     # 创建Flask应用实例
     app = Flask(__name__)
 
@@ -52,6 +58,9 @@ def create_app():
     # 如果`init_movie_controller`是必需的，请确保其实现
     # 否则，可以考虑移除此行
     init_movie_controller(app)
+
+    # 初始化数据库
+    init_app(app)
 
     return app
 

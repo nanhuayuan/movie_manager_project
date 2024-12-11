@@ -26,7 +26,6 @@ class ScraperService:
     def __init__(self):
         config = AppConfig().get_web_scraper_config()
         self.base_url = config.get('javdb_url', "https://javdb.com")
-        logger.info(f"初始化ScraperService，基础URL: {self.base_url}")
 
         # 初始化服务
         self.service_map = {
@@ -45,137 +44,84 @@ class ScraperService:
             'everything': EverythingService(),
             'jellyfin': JellyfinService()
         }
-        logger.info(f"已初始化 {len(self.service_map)} 个服务")
 
         self.http_util = HttpUtil()
         self.parser = ParserFactory.get_parser()
-        logger.info("HTTP工具和解析器已准备就绪")
 
     def process_all_charts(self):
         """处理所有榜单数据"""
         try:
-            logger.info("开始处理所有榜单数据")
             if not (charts := self.service_map['chart'].parse_local_chartlist()):
-                logger.warning("未找到任何榜单数据")
+                logger.info("未找到榜单数据")
                 return
 
-            logger.info(f"找到 {len(charts)} 个榜单")
             for chart in charts:
                 self._process_chart(chart)
-            logger.info("所有榜单处理完成")
         except Exception as e:
-            logger.error(f"榜单处理全局错误: {str(e)}")
-            raise
+            logger.error(f"榜单处理出错: {str(e)}")
 
     def _process_chart(self, chart: Chart):
         """处理单个榜单数据"""
-        logger.info(f"开始处理榜单: {chart.name}")
+        logger.info(f"正在处理榜单: {chart.name}")
         try:
             chart_entries = list(chart.entries)
-            logger.info(f"榜单 '{chart.name}' 共有 {len(chart_entries)} 个条目")
             for entry in chart_entries:
                 if entry.serial_number and entry.serial_number.startswith('FC2'):
-                    logger.info(f"跳过FC2类型条目: {entry.serial_number}")
                     continue
-
-                logger.debug(f"处理条目: {entry.serial_number},排行: {entry.rank}")
                 if movie := self._fetch_and_process_movie(entry):
                     self._save_chart_entry(entry, movie, chart.name)
-                    logger.info(f"成功处理并保存条目: {entry.serial_number}")
                 time.sleep(random.randint(1, 5))
-
-            logger.info(f"榜单 '{chart.name}' 处理完成")
         except Exception as e:
             logger.error(f"处理榜单 '{chart.name}' 时出错: {str(e)}")
 
     def _fetch_and_process_movie(self, entry: ChartEntry) -> Optional[Movie]:
         """获取并处理电影信息"""
-        logger.info(f"开始获取电影信息: {entry.serial_number}")
+        logger.info(f"正在处理电影: {entry.serial_number}")
         try:
             if not (movie_info := self._fetch_movie_info(entry)):
-                logger.warning(f"未能获取电影详情: {entry.serial_number}")
                 return None
 
             # 处理下载状态
             movie_info.download_status = self._process_movie_download(movie=movie_info)
-            logger.debug(f"电影信息详情: {movie_info.to_dict()}")
-
+            logger.debug(f"电影信息详情: {movie_info}")
             existing_movie = self._get_existing_movie(entry.serial_number)
-            result = (
+            return (
                 self._update_movie(existing_movie, movie_info)
                 if existing_movie
                 else self._create_new_movie(movie_info)
             )
-
-            if result:
-                logger.info(f"电影处理成功: {entry.serial_number}")
-            return result
         except Exception as e:
             logger.error(f"处理电影 '{entry.serial_number}' 时出错: {str(e)}")
             return None
 
     def _fetch_movie_info(self, entry: ChartEntry) -> Optional[dict]:
         """获取电影详细信息。"""
-        try:
-            uri = self._get_movie_detail_page_url(entry)
-            if not uri:
-                logger.warning(f"未找到电影 {entry.serial_number} 的详情页URL")
-                return None
-
-            detail_url = f'{self.base_url}{uri}'
-            logger.debug(f"电影详情页URL: {detail_url}")
-
-            if not (detail_page := self.http_util.request(url=detail_url)):
-                logger.warning(f"获取电影详情页失败: {detail_url}")
-                return None
-
-            movie_details = self.parser.parse_movie_details_page(detail_page)
-
-            if movie_details.serial_number and movie_details.serial_number.startswith('FC2'):
-                logger.info(f"跳过FC2类型条目: {movie_details.serial_number}")
-                return None
-
-            if not movie_details:
-                logger.warning(f"解析电影详情页失败: {detail_url}")
-            return movie_details
-        except Exception as e:
-            logger.error(f"获取电影信息出错: {str(e)}")
+        uri = self._get_movie_detail_page_url(entry)
+        detail_url = f'{self.base_url}{uri}'
+        if not (detail_page := self.http_util.request(url=detail_url)):
             return None
+
+        return self.parser.parse_movie_details_page(detail_page)
 
     def _get_movie_detail_page_url(self, entry: ChartEntry) -> str:
         """获取电影详情页URL。"""
-        logger.debug(f"获取电影 {entry.serial_number} 的详情页URL")
-
         if entry.uri:
-            logger.debug(f"使用预设URI: {entry.uri}")
             return entry.uri
 
         # 没有地址要去搜索
         search_url = f'{self.base_url}/search?q={entry.serial_number}&f=all'
-        logger.debug(f"搜索URL: {search_url}")
-
         if not (search_page := self.http_util.request(url=search_url)):
-            logger.warning(f"搜索页面请求失败: {search_url}")
             return None
 
         if not (search_results := self.parser.parse_search_results(search_page)):
-            logger.warning(f"搜索结果解析失败: {search_url}")
-            #raise Exception(f"搜索失败，查找不到: {entry.serial_number}")
             return None
 
-        # 搜索结果判断逻辑
-        if entry.serial_number.lower() != search_results[0].serial_number.lower():
-            logger.warn(f"搜索失败，查找到: '{search_results[0].serial_number}'，但输入为: '{entry.serial_number}'")
-
-        if entry.serial_number and entry.serial_number.startswith('FC2'):
-             raise Exception(f"搜索失败，查找到FC2: '{search_results[0].serial_number}'，但输入为:'{entry.serial_number}'")
         uri = search_results[0].uri
-        logger.debug(f"找到搜索结果URI: {uri}")
+
         return uri
 
     def _get_existing_movie(self, serial_number: str) -> Optional[Movie]:
         """从数据库获取已存在的电影信息"""
-        logger.debug(f"查询电影是否已存在: {serial_number}")
         return self.service_map['movie'].get_movie_from_db_by_serial_number(
             serial_number,
             options=[
@@ -190,16 +136,10 @@ class ScraperService:
 
     def _create_new_movie(self, movie: Movie) -> Optional[Movie]:
         """创建新电影记录"""
-        logger.info(f"创建新电影记录: {movie.serial_number}")
         self._process_all_relations(movie)
-        logger.debug(f"创建前电影信息详情: {movie.to_dict()}")
-
         try:
-            new_movie = self.service_map['movie'].create(movie)
-            logger.info(f"新电影记录创建成功: {new_movie.serial_number}")
-            return new_movie
+            return self.service_map['movie'].create(movie)
         except IntegrityError:
-            logger.warning(f"创建电影记录时遇到完整性错误，尝试获取已存在记录: {movie.serial_number}")
             return self.service_map['movie'].get_movie_from_db_by_serial_number(
                 movie.serial_number)
 
@@ -322,38 +262,25 @@ class ScraperService:
     def _process_movie_download(self, movie: Movie) -> int:
         """处理电影下载状态"""
         try:
-            logger.debug(f"开始处理电影下载状态: {movie.serial_number}")
-
             if self.service_map['jellyfin'].check_movie_exists(title=movie.serial_number):
-                logger.info(f"电影已存在于Jellyfin库: {movie.serial_number}")
                 return DownloadStatus.IN_LIBRARY.value
-
             elif self.service_map['everything'].local_exists_movie(movie.serial_number):
-                logger.info(f"本地已存在电影: {movie.serial_number}")
                 return DownloadStatus.COMPLETED.value
 
             if not movie.have_mg or not movie.magnets:
-                logger.warning(f"电影无可用磁力链接: {movie.serial_number}")
                 return DownloadStatus.NO_SOURCE.value
 
             status = self.service_map['download'].get_download_status(movie.serial_number)
-            logger.debug(f"当前下载状态: {status}")
 
             # 已完成状态直接返回
             if status in [DownloadStatus.COMPLETED.value, DownloadStatus.IN_LIBRARY.value]:
-                logger.info(f"电影下载状态已完成: {movie.serial_number}")
                 return status
 
             # 添加下载任务
             magnet = movie.magnets[0]
-            magnet_link = f"magnet:?xt=urn:btih:{magnet.magnet_xt}"
-            logger.info(f"准备添加下载任务: {magnet_link}")
-
-            if self.service_map['download'].add_download(magnet_link):
-                logger.info(f"下载任务添加成功: {movie.serial_number}")
+            if self.service_map['download'].add_download(f"magnet:?xt=urn:btih:{magnet.magnet_xt}"):
                 return DownloadStatus.DOWNLOADING.value
 
-            logger.warning(f"下载任务添加失败: {movie.serial_number}")
             return DownloadStatus.DOWNLOAD_FAILED.value
         except Exception as e:
             logger.error(f"处理电影下载状态时发生错误：{e}")

@@ -1,12 +1,14 @@
 # app-dev.yml - 开发环境特定配置
 database:
-  password: "dev123456"
-  dbname: movie_dev
+  password: "123456"
+  dbname: movie
 
 jellyfin:
-  api_key: "dev_key"
-  user_id: 'dev_user'
-  item_id: 'dev_item'
+  api_url: "http://192.168.1.9:8096"
+  api_key: "8fa1a15a2a484d6fb86167cd31b3cef2"
+  user_id: 'b128da17dbf5412bac37c096e25f2de5'
+  item_id: 'ab532873de6a4fcd09ca15f5d59cd55a'
+  playlists_id: '953141ca3d64b4e0bf3ff52b29bcbbab'
 
 web_scraper:
   proxy:

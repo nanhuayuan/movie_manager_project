@@ -77,40 +77,35 @@ class LogUtil:
             import logging.config
 
             # 读取配置文件并转换为UTF-8编码
-            with open('D:\project\movie_manager_project\config\logging.yml', 'r', encoding='utf-8') as f:
-                config = yaml.safe_load(f.read())
-            logging.config.dictConfig(config)
-
+            logging.config.fileConfig('D:\project\movie_manager_project\config\logging.conf')
 
             LogUtil._initialized = True
 
 
 
     @staticmethod
-    def get_logger(name=None):
+    def get_logger(name='fileAndConsole'):
         """获取logger实例"""
         return logging.getLogger(name)
 
-
 # 创建全局日志实例
-logger = LogUtil().get_logger('fileAndConsole')
-
+my_logger = LogUtil().get_logger('fileAndConsole')
 
 # 便捷的日志记录函数
 def debug(msg, *args, **kwargs):
-    logger.debug(msg, *args, **kwargs)
+    my_logger.debug(msg, *args, **kwargs)
 
 
 def info(msg, *args, **kwargs):
-    logger.info(msg, *args, **kwargs)
+    my_logger.info(msg, *args, **kwargs)
 
 
 def warning(msg, *args, **kwargs):
-    logger.warning(msg, *args, **kwargs)
+    my_logger.warning(msg, *args, **kwargs)
 
 
 def error(msg, *args, **kwargs):
-    logger.error(msg, *args, **kwargs)
+    my_logger.error(msg, *args, **kwargs)
 
 
 def critical(msg, *args, **kwargs):

@@ -84,7 +84,7 @@ class Top250MarkdownReader(MarkdownReader):
         else:
             uri_match = self.URI_PATTERN.search(line)
             if uri_match and current_chart_entry:
-                current_chart_entry.link = uri_match.group(1)
+                current_chart_entry.uri = uri_match.group(1)
                 chart_obj.entries.append(current_chart_entry)
                 current_chart_entry = None
         return current_chart_entry

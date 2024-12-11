@@ -31,9 +31,9 @@ class BaseMixin:
         f"{site}_id": db.Column(db.String(256, 'utf8mb4_unicode_ci'), server_default=db.text("''"))
         for site in _sites
     })
-    name = db.Column(db.String('utf8mb4_unicode_ci'), nullable=False)
-    name_cn = db.Column(db.String('utf8mb4_unicode_ci'), server_default=db.text("''"))
-    name_en = db.Column(db.String('utf8mb4_unicode_ci'), server_default=db.text("''"))
+    name = db.Column(db.String(1024, 'utf8mb4_unicode_ci'), nullable=False)
+    name_cn = db.Column(db.String(1024, 'utf8mb4_unicode_ci'), server_default=db.text("''"))
+    name_en = db.Column(db.String(1024, 'utf8mb4_unicode_ci'), server_default=db.text("''"))
 
 
 # 创建关系表（不包含Studio）

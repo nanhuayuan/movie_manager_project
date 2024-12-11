@@ -24,7 +24,7 @@ handlers:
     class: logging.handlers.TimedRotatingFileHandler
     level: DEBUG
     formatter: simple
-    filename: ./app.log
+    filename: ../../../logs/app.log
     when: midnight
     interval: 1
     backupCount: 30

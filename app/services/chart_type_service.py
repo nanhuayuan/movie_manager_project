@@ -86,4 +86,4 @@ class ChartTypeService(BaseService[ChartType, ChartTypeDAO]):
             return None
 
     def get_current_chart_type(self):
-        return self.chart_type
+        return self.dao.get_by_name(self.chart_type.name) or self.chart_type
