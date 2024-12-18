@@ -70,10 +70,11 @@ class ScraperService:
     def _process_chart(self, chart: Chart):
         """处理单个榜单数据"""
         logger.info(f"开始处理榜单: {chart.name}")
-        try:
-            chart_entries = list(chart.entries)
-            logger.info(f"榜单 '{chart.name}' 共有 {len(chart_entries)} 个条目")
-            for entry in chart_entries:
+
+        chart_entries = list(chart.entries)
+        logger.info(f"榜单 '{chart.name}' 共有 {len(chart_entries)} 个条目")
+        for entry in chart_entries:
+            try:
                 if entry.serial_number and entry.serial_number.startswith('FC2'):
                     logger.info(f"跳过FC2类型条目: {entry.serial_number}")
                     continue
@@ -82,65 +83,65 @@ class ScraperService:
                 if movie := self._fetch_and_process_movie(entry):
                     self._save_chart_entry(entry, movie, chart.name)
                     logger.info(f"成功处理并保存条目: {entry.serial_number}")
-                time.sleep(random.randint(1, 5))
+                else:
+                    logger.warning(f"无法处理条目: {entry.serial_number}")
 
-            logger.info(f"榜单 '{chart.name}' 处理完成")
-        except Exception as e:
-            logger.error(f"处理榜单 '{chart.name}' 时出错: {str(e)}")
+                time.sleep(random.randint(1, 5))
+            except Exception as e:
+                logger.error(f"处理榜单 '{chart.name}' 时出错: {str(e)}")
+        logger.info(f"榜单 '{chart.name}' 处理完成")
+
 
     def _fetch_and_process_movie(self, entry: ChartEntry) -> Optional[Movie]:
         """获取并处理电影信息"""
         logger.info(f"开始获取电影信息: {entry.serial_number}")
-        try:
-            if not (movie_info := self._fetch_movie_info(entry)):
-                logger.warning(f"未能获取电影详情: {entry.serial_number}")
-                return None
 
-            # 处理下载状态
-            movie_info.download_status = self._process_movie_download(movie=movie_info)
-            logger.debug(f"电影信息详情: {movie_info.to_dict()}")
-
-            existing_movie = self._get_existing_movie(entry.serial_number)
-            result = (
-                self._update_movie(existing_movie, movie_info)
-                if existing_movie
-                else self._create_new_movie(movie_info)
-            )
-
-            if result:
-                logger.info(f"电影处理成功: {entry.serial_number}")
-            return result
-        except Exception as e:
-            logger.error(f"处理电影 '{entry.serial_number}' 时出错: {str(e)}")
+        if not (movie_info := self._fetch_movie_info(entry)):
+            logger.warning(f"未能获取电影详情: {entry.serial_number}")
             return None
+
+        if not movie_info.serial_number:
+            logger.warning(f"电影 {entry.serial_number} 的序列号未设置")
+            raise Exception(f"电影 {entry.serial_number} 的序列号未设置")
+
+        # 处理下载状态
+        movie_info.download_status = self._process_movie_download(movie=movie_info)
+        logger.debug(f"电影信息详情: {movie_info.to_dict()}")
+
+        existing_movie = self._get_existing_movie(entry.serial_number)
+        result = (
+            self._update_movie(existing_movie, movie_info)
+            if existing_movie
+            else self._create_new_movie(movie_info)
+        )
+
+        if result:
+            logger.info(f"电影处理成功: {entry.serial_number}")
+        return result
 
     def _fetch_movie_info(self, entry: ChartEntry) -> Optional[dict]:
         """获取电影详细信息。"""
-        try:
-            uri = self._get_movie_detail_page_url(entry)
-            if not uri:
-                logger.warning(f"未找到电影 {entry.serial_number} 的详情页URL")
-                return None
-
-            detail_url = f'{self.base_url}{uri}'
-            logger.debug(f"电影详情页URL: {detail_url}")
-
-            if not (detail_page := self.http_util.request(url=detail_url)):
-                logger.warning(f"获取电影详情页失败: {detail_url}")
-                return None
-
-            movie_details = self.parser.parse_movie_details_page(detail_page)
-
-            if movie_details.serial_number and movie_details.serial_number.startswith('FC2'):
-                logger.info(f"跳过FC2类型条目: {movie_details.serial_number}")
-                return None
-
-            if not movie_details:
-                logger.warning(f"解析电影详情页失败: {detail_url}")
-            return movie_details
-        except Exception as e:
-            logger.error(f"获取电影信息出错: {str(e)}")
+        uri = self._get_movie_detail_page_url(entry)
+        if not uri:
+            logger.warning(f"未找到电影 {entry.serial_number} 的详情页URL")
             return None
+
+        detail_url = f'{self.base_url}{uri}'
+        logger.debug(f"电影详情页URL: {detail_url}")
+
+        if not (detail_page := self.http_util.request(url=detail_url)):
+            logger.warning(f"获取电影详情页失败: {detail_url}")
+            return None
+
+        movie_details = self.parser.parse_movie_details_page(detail_page)
+
+        if movie_details.serial_number and movie_details.serial_number.startswith('FC2'):
+            logger.info(f"跳过FC2类型条目: {movie_details.serial_number}")
+            return None
+
+        if not movie_details:
+            logger.warning(f"解析电影详情页失败: {detail_url}")
+        return movie_details
 
     def _get_movie_detail_page_url(self, entry: ChartEntry) -> str:
         """获取电影详情页URL。"""
@@ -160,7 +161,7 @@ class ScraperService:
 
         if not (search_results := self.parser.parse_search_results(search_page)):
             logger.warning(f"搜索结果解析失败: {search_url}")
-            #raise Exception(f"搜索失败，查找不到: {entry.serial_number}")
+            # raise Exception(f"搜索失败，查找不到: {entry.serial_number}")
             return None
 
         # 搜索结果判断逻辑
@@ -168,7 +169,7 @@ class ScraperService:
             logger.warn(f"搜索失败，查找到: '{search_results[0].serial_number}'，但输入为: '{entry.serial_number}'")
 
         if entry.serial_number and entry.serial_number.startswith('FC2'):
-             raise Exception(f"搜索失败，查找到FC2: '{search_results[0].serial_number}'，但输入为:'{entry.serial_number}'")
+            raise Exception(f"搜索失败，查找到FC2: '{search_results[0].serial_number}'，但输入为:'{entry.serial_number}'")
         uri = search_results[0].uri
         logger.debug(f"找到搜索结果URI: {uri}")
         return uri

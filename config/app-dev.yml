@@ -1,7 +1,7 @@
 # app-dev.yml - 开发环境特定配置
 database:
   password: "123456"
-  dbname: movie
+  dbname: movie2
 
 jellyfin:
   api_url: "http://192.168.1.9:8096"

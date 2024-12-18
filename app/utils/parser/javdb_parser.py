@@ -49,8 +49,15 @@ class JavdbParser(BaseMovieParser):
                 title_parts = [text.strip() for text in title_elem.stripped_strings]
                 if len(title_parts) >= 2:
                     movie.serial_number = title_parts[0]
+
+                    if not movie.serial_number:
+                        raise ParserError(f"无法解析番号: {movie.serial_number}")
+
                     movie.title = title_parts[-1]
                     movie.name = title_parts[-1]
+                    if not movie.name:
+                        raise ParserError(f"无法解析番号: {movie.name}")
+
                     debug(f"解析到番号:{movie.serial_number}, 标题:{movie.title}, 名称:{movie.name}")
 
             # 解析面板信息
@@ -81,6 +88,9 @@ class JavdbParser(BaseMovieParser):
 
             # 解析磁力链接
             self._parse_magnets(soup, movie)
+
+            if not movie.serial_number:
+                warning(f"无法解析番号: {movie.serial_number}")
 
             info(f"电影 {movie.serial_number} 解析完成")
             return movie
@@ -134,6 +144,9 @@ class JavdbParser(BaseMovieParser):
                 for actor_link in actor_links:
                     actor = Actor()
                     actor.name = actor_link.text.strip()
+                    if actor.name and "官方" in actor.name:
+                        warning(f"解析演员信息出错: {actor.name}")
+                        raise ParserError(f"解析演员信息出错: {actor.name}")
                     actor.javdb_uri = actor_link.get('href', '')
                     movie.actors.append(actor)
                     debug(f"解析演员: {actor.name}")
@@ -163,6 +176,11 @@ class JavdbParser(BaseMovieParser):
                 for genre_link in genre_links:
                     genre = Genre()
                     genre.name = genre_link.text.strip()
+
+                    if genre.name and "官方" in genre.name:
+                        warning(f"解析类别信息出错: {genre.name}")
+                        raise ParserError(f"解析类别信息出错: {genre.name}")
+
                     movie.genres.append(genre)
                     debug(f"解析类别: {genre.name}")
         except Exception as e:
@@ -191,6 +209,11 @@ class JavdbParser(BaseMovieParser):
                 if studio_link:
                     studio = Studio()
                     studio.name = studio_link.text.strip()
+
+                    if studio.name and "官方" in studio.name:
+                        warning(f"解析制作商信息出错: {studio.name}")
+                        raise ParserError(f"解析制作商信息出错: {studio.name}")
+
                     movie.studio = studio
                     debug(f"解析制作商: {studio.name}")
         except Exception as e:
