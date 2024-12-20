@@ -1,5 +1,6 @@
 
 import logging
+from typing import Optional
 
 from app.utils import EverythingUtils
 
@@ -22,3 +23,5 @@ class EverythingService:
         # 本地存在的，才叫存在
         # everything检查本地是否存在
         return self.file_exists(serial_number)
+    def search_movie(self, serial_number: str, search_path='', file_extensions='') -> Optional[str]:
+        return self.everything.search_movie(serial_number, search_path, file_extensions)

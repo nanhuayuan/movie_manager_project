@@ -233,6 +233,8 @@ class JellyfinUtil(JellyfinUtilInterface):
         :param user_id: 用户 ID
         :return: 播放列表 ID
         """
+        user_id, _ = self._get_default_user_id_and_item_id(user_id, '')
+
         if all_existing_playlists == None:
             all_existing_playlists = self.get_existing_playlists(user_id)
 

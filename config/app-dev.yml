@@ -1,14 +1,14 @@
 # app-dev.yml - 开发环境特定配置
 database:
   password: "123456"
-  dbname: movie2
+  dbname: movie
 
 jellyfin:
-  api_url: "http://192.168.1.9:8096"
-  api_key: "8fa1a15a2a484d6fb86167cd31b3cef2"
-  user_id: 'b128da17dbf5412bac37c096e25f2de5'
-  item_id: 'ab532873de6a4fcd09ca15f5d59cd55a'
-  playlists_id: '953141ca3d64b4e0bf3ff52b29bcbbab'
+  api_url: "http://127.0.0.1:8096"
+  api_key: "1d4f983cf0a04522a444965fdfbfde9e" #密钥
+  user_id: '5207a4b5a7bf4167ae81ba9d5f341c74' #root用户ID
+  item_id: '3227ce1e069754c594af25ea66d69fc7' #电影库Id
+  playlists_id: 'c89aa4ba14db3d46f85eef3ad0f8a569'  # 播放列表ID,未更新
 
 web_scraper:
   proxy:
