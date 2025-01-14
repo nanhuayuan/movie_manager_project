@@ -1,14 +1,20 @@
+from datetime import datetime, timedelta
+
 import pytest
 import os
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
+from qbittorrentapi import SearchAPIMixIn
+
 from app.config.log_config import debug, info, warning, error, critical
 from app.main import create_app
 from app.main_add_chart_to_db import run_scraper
 from app.main_add_to_playlists import process_charts
 from app.main_remove_duplicate_movies_from_jellyfin import process_duplicates
 from app.main_remove_not_exist_locally_in_jellyfin import process_missing_movies
+from app.services import DownloadService
 from app.utils.db_util import get_db, init_app
+from app.utils.download_client import TransmissionClient
 
 
 @pytest.fixture(scope='session')
@@ -116,6 +122,87 @@ def test_remove_missing_movies(app, session, scraper_service):
         result = process_missing_movies()
         debug(f"处理结果：{result}")
 
+
+def test_check_torrent_info(app, session, scraper_service):
+    """
+    检查种子信息
+    Args:
+        app:
+        session:
+        scraper_service:
+
+    Returns:
+
+    """
+    with app.app_context():
+        info("开始测试：检查种子信息")
+        # 创建下载服务实例
+
+
+
+        service = DownloadService()
+
+        torrentInfo_bglb = service.get_torrent_by_name('报告老板')
+
+        print(torrentInfo_bglb)
+
+
+        # 批量添加下载任务
+        magnets = ['magnet:?xt=...', 'magnet:?xt=...']
+        results = service.batch_add_downloads(magnets, '/downloads')
+
+        # 添加定时任务
+        task_id = service.add_scheduled_task(
+            torrent_hash='...',
+            action='pause',
+            schedule_time=datetime.now() + timedelta(hours=2)
+        )
+
+        # 导出报告
+        report = service.export_task_report()
+
+        # 优化活动任务
+        result = service.optimize_active_tasks()
+
+        # 清理资源
+        service.cleanup()
+        debug(f"处理结果：{result}")
+
+def test_bitcomet_client(app):
+    """"""
+    with app.app_context():
+        info("开始测试：移除本地不存在的电影")
+        # BitComet客户端
+        bc_client = BitCometClient(
+            host='localhost',
+            port=6363,
+            username='admin',
+            password='password'
+        )
+
+        # 设置速度限制
+        bc_client.set_download_limit(1024 * 1024)  # 1MB/s
+
+        # 获取文件列表
+        files = bc_client.get_torrent_file_list("torrent_hash")
+
+        # Transmission客户端
+        tr_client = TransmissionClient(
+            host='localhost',
+            port=9091,
+            username='admin',
+            password='password'
+        )
+
+        # 获取统计信息
+        stats = tr_client.get_session_stats()
+
+        # 移动种子文件
+        tr_client.move_torrent("torrent_hash", "/new/location")
+
+        # 验证种子文件
+        tr_client.verify_torrent("torrent_hash")
+        debug(f"处理结果：{result}")
 
 def test_environment_config(app):
     """测试环境配置是否正确"""
