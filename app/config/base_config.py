@@ -16,7 +16,7 @@ class BaseConfig:
 
     def _load_config(self, config_name: str) -> None:
         config_dir = Path(__file__).parent.parent.parent / 'config'
-        env = os.getenv('APP_ENV', 'dev')
+        env = os.getenv('APP_ENV', 'test')
 
         base_config = self._read_yaml(config_dir / f'{config_name}-base.yml')
         env_config = self._read_yaml(config_dir / f'{config_name}-{env}.yml')

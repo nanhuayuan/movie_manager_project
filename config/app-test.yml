@@ -1,7 +1,7 @@
 # app-test.yml - 测试环境特定配置
 database:
   password: "123456"
-  dbname: movie2
+  dbname: movie
 
 jellyfin:
   api_url: "http://192.168.31.45:8096"
@@ -9,6 +9,10 @@ jellyfin:
   user_id: 'b128da17dbf5412bac37c096e25f2de5'
   item_id: 'ab532873de6a4fcd09ca15f5d59cd55a'
   playlists_id: '953141ca3d64b4e0bf3ff52b29bcbbab'
+
+chart:
+  markdown_reader: top_250 # normal or top_250
+
 
 download_client:
   host: "192.168.31.45"
