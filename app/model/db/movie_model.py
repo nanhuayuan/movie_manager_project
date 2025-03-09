@@ -189,3 +189,22 @@ class Actor(DBBaseModel, BaseMixin):
     pic = db.Column(db.String(128, 'utf8mb4_unicode_ci'), server_default=db.text("''"))
     favorite = db.Column(db.SmallInteger, nullable=False, server_default=db.text("'0'"))
     movies = db.relationship("Movie", secondary=relation_tables['movie_actor'], back_populates="actors")
+
+
+class DownloadFailure(DBBaseModel):
+    __tablename__ = 'download_failure'
+
+    magnet_id = db.Column(db.Integer, nullable=False, server_default=db.text("0"), comment='关联的磁力链接ID')
+    movie_id = db.Column(db.Integer, nullable=False, server_default=db.text("0"), comment='关联的电影ID')
+    censored_id = db.Column(db.String(64, 'utf8mb4_unicode_ci'), nullable=False, server_default=db.text("''"),
+                            comment='电影识别码')
+    magnet_xt = db.Column(db.String(768, 'utf8mb4_unicode_ci'), nullable=False, server_default=db.text("''"), unique=True, comment='磁力链接哈希')
+    failure_reason = db.Column(db.String(512, 'utf8mb4_unicode_ci'), nullable=False, server_default=db.text("''"),
+                               comment='失败原因')
+    attempt_count = db.Column(db.Integer, nullable=False, server_default=db.text("1"), comment='尝试次数')
+    last_attempt = db.Column(db.DateTime, nullable=False, server_default=db.text("CURRENT_TIMESTAMP"), comment='最后尝试时间')
+    status = db.Column(db.Integer, nullable=False, server_default=db.text("0"), comment='状态：0=待重试，1=已重试成功，2=放弃重试')
+
+    # You might want to add relationships if needed
+    # magnet = db.relationship("MagnetModel", foreign_keys=[magnet_id])
+    # movie = db.relationship("MovieModel", foreign_keys=[movie_id])

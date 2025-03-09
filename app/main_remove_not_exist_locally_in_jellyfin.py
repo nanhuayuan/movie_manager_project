@@ -3,6 +3,8 @@ from app.main import create_app
 from app.services import EverythingService
 from app.utils.jellyfin_util import JellyfinUtil
 from typing import Dict, Optional
+import os
+import re
 
 # 常量定义
 MIN_MOVIE_SIZE = 100 * 1024 * 1024  # 最小电影文件大小: 100MB
@@ -49,7 +51,7 @@ def process_missing_movies(check_path: bool = False) -> Dict:
     检查并处理Jellyfin中不存在本地文件的电影
 
     Args:
-        check_path: 是否检查文件路径（可选）
+        check_path: 是否检查电影文件是否在指定的媒体路径下（可选）
 
     Returns:
         Dict: 处理结果统计信息
@@ -73,20 +75,33 @@ def process_missing_movies(check_path: bool = False) -> Dict:
         try:
             debug(f"正在检查第 {i + 1}/{stats['total_movies']} 部电影：{movie.name}")
 
-            search_result = everything_service.search_movie(serial_number=movie.name)
-            movie_exists = False
+            current_movie = jellyfin_util.get_movie_details(movie_id=movie.id)
+            # 电影路径
+            movie_path = current_movie.path
+            info(f"电影 {movie.name} ，路径{movie_path}")
 
-            if not search_result.empty:
-                for _, row in search_result.iterrows():
-                    if is_valid_movie_file(movie.name, row, check_path):
-                        movie_exists = True
-                        debug(f"找到有效的电影文件: {row['name']}")
-                        if check_path:
-                            debug(f"文件路径: {row['path']}")
-                        debug(f"文件大小: {row['size'] / 1024 / 1024:.2f}MB")
-                        break
+            # 处理路径部分
+            if not movie_path:
+                warning(f"电影 {movie.name} 的路径为空")
+                # 如果路径为空，直接使用Everything搜索
+                file_exists = _check_with_everything(everything_service, movie, check_path)
+            else:
+                # 处理路径格式，如果是/开头的路径，自动加上'Z:'
+                if movie_path.startswith('/'):
+                    #movie_path = f"Z:{movie_path}"
+                    movie_path = re.sub(r'^/share/CACHEDEV\d+_DATA', 'Z:', movie_path)
+                    debug(f"已将路径转换为: {movie_path}")
 
-            if not movie_exists:
+                # 检查文件是否存在
+                if os.path.exists(movie_path):
+                    debug(f"电影文件存在于路径: {movie_path}")
+                    file_exists = True
+                else:
+                    warning(f"电影文件在路径 {movie_path} 不存在")
+                    # 路径不存在，使用Everything搜索作为备份
+                    file_exists = _check_with_everything(everything_service, movie, check_path)
+
+            if not file_exists:
                 stats["missing_files"] += 1
                 info(f"电影 {movie.name} 在本地不存在或不满足要求")
                 try:
@@ -114,6 +129,33 @@ def process_missing_movies(check_path: bool = False) -> Dict:
         warning(f"- 处理错误: {stats['errors']} 个")
 
     return stats
+
+
+def _check_with_everything(everything_service, movie, check_path: bool) -> bool:
+    """
+    使用Everything服务检查电影文件是否存在
+
+    Args:
+        everything_service: Everything服务实例
+        movie: 电影信息
+        check_path: 是否检查指定路径
+
+    Returns:
+        bool: 文件是否存在
+    """
+    search_result = everything_service.search_movie(serial_number=movie.name)
+
+    if search_result.empty:
+        return False
+
+    for _, row in search_result.iterrows():
+        if is_valid_movie_file(movie.name, row, check_path):
+            debug(f"everything找到有效的电影文件: {row['name']}")
+            debug(f"文件路径: {row['path']}")
+            debug(f"文件大小: {row['size'] / 1024 / 1024:.2f}MB")
+            return True
+
+    return False
 
 
 def main():

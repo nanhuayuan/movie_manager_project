@@ -35,6 +35,7 @@ class DownloadService:
         self.password = self.config.get('password', 'adminadmin')
         self.client_type = self.config.get('type', DownloadClientEnum.QBITTORRENT.value)
         self.speed_limit = self.config.get('type', 7 * 1024 * 1024) # 默认 7MB/s
+        self.max_retries = self.config.get('add_torrent_max_retries', 3)
         self.client = self.create_client()
         self.client.connect()
 
@@ -460,9 +461,34 @@ class DownloadService:
             password=password or self.password
         )
 
-    def add_download(self, magnet: str, save_path: Optional[str] = None) -> bool:
+    def add_download_old(self, magnet: str, save_path: Optional[str] = None) -> bool:
         """添加下载任务"""
         return self.client.add_torrent(magnet, save_path)
+
+    def add_download(self, magnet: str, save_path: Optional[str] = None, max_retries: Optional[int] = None) -> bool:
+        """
+        添加下载任务
+
+        参数:
+            magnet: 磁力链接
+            save_path: 可选的保存路径
+            max_retries: 可选的最大重试次数，如果不提供则使用配置文件中的值
+
+        返回:
+            bool: 添加成功返回True，失败返回False
+        """
+        # 如果没有提供max_retries参数，则使用配置文件中的值
+        retries = max_retries if max_retries is not None else self.max_retries
+
+        for attempt in range(retries):
+            try:
+                return self.client.add_torrent(magnet, save_path)
+            except Exception as e:
+                if attempt < retries - 1:  # 如果不是最后一次尝试
+                    continue
+                else:  # 最后一次尝试也失败
+                    print(f"添加下载任务失败，已重试{retries}次: {str(e)}")
+                    return False
 
     def remove_download(self, torrent_hash: str, delete_files: bool = False) -> bool:
         """删除下载任务"""

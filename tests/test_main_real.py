@@ -26,7 +26,7 @@ def app():
         Flask: 配置好的Flask测试应用实例
     """
     info("正在创建测试用Flask应用实例")
-    app = create_app()
+    app = create_app('test')
     info("测试用Flask应用实例创建完成")
     return app
 

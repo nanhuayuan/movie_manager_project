@@ -11,3 +11,4 @@ from .chart_dao import ChartDAO
 from .chart_entry_dao import ChartEntryDAO
 from .chart_type_dao import ChartTypeDAO
 from .chart_history_dao import ChartHistoryDAO
+from .download_failure_dao import DownloadFailureDAO

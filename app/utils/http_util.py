@@ -14,8 +14,8 @@ from app.config.log_config import debug, info, warning, error, critical
 import os
 from datetime import datetime, timedelta
 
-os.environ["http_proxy"] = "http://127.0.0.1:7890"
-os.environ["https_proxy"] = "http://127.0.0.1:7890"
+#os.environ["http_proxy"] = "http://127.0.0.1:7890"
+#os.environ["https_proxy"] = "http://127.0.0.1:7890"
 
 class ProxyRegion(Enum):
     AUSTRALIA = "Australia"
@@ -133,7 +133,79 @@ class HttpUtil:
             print(f'切换代理失败: {best_proxy}')
             return False
 
+    def local_request(self, url: str, cookie: str = '', print_content: bool = False) -> Optional[BeautifulSoup]:
+        """专门用于内网请求，不使用代理"""
+        return self.request(url, proxy_enable=False, cookie=cookie, print_content=print_content)
+
     def request(self, url: str, proxy_enable: bool = True,
+                cookie: str = '', print_content: bool = False) -> Optional[BeautifulSoup]:
+        """发送HTTP请求并处理代理"""
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36',
+        }
+        if cookie:
+            headers['Cookie'] = cookie
+
+        # 判断是否为内网地址
+        is_local_network = any([
+            url.startswith('http://localhost'),
+            url.startswith('https://localhost'),
+            url.startswith('http://127.'),
+            url.startswith('https://127.'),
+            url.startswith('http://192.168.'),
+            url.startswith('https://192.168.')
+        ])
+
+        # 内网地址默认不走代理，除非特别指定
+        use_proxy = proxy_enable and not is_local_network
+
+        # 设置请求级别的代理，不影响全局环境变量
+        proxies = None
+        if use_proxy:
+            proxies = {
+                'http': f'http://{self.proxy_host}:{self.proxy_port}',
+                'https': f'http://{self.proxy_host}:{self.proxy_port}'
+            }
+
+        # 请求时打印代理状态
+        if print_content:
+            print(f"请求URL: {url}, 使用代理: {'是' if proxies else '否'}")
+
+        while True:
+            try:
+                # 通过proxies参数控制是否使用代理，不影响全局设置
+                response = requests.get(url=url, headers=headers, proxies=proxies, timeout=120)
+                response.raise_for_status()
+
+                if print_content:
+                    print(f"响应内容: {response.text}")
+
+                soup = BeautifulSoup(response.text, 'lxml')
+                banned = "The owner of this website has banned your access based on your browser's behaving"
+
+                if banned in soup.get_text("|", strip=True):
+                    # 如果被禁，切换代理并重试
+                    proxy_change_success = self.change_proxy()
+                    if not proxy_change_success:
+                        print("所有代理均已被禁，程序停止")
+                        sys.exit(0)
+                    continue
+
+                return soup
+
+            except RequestException as e:
+                print(f"请求失败，错误: {e}")
+                if use_proxy:
+                    proxy_change_success = self.change_proxy()
+                    if not proxy_change_success:
+                        print("无法切换到可用代理，程序停止")
+                        return None
+                    time.sleep(random.randint(20, 60))
+                else:
+                    # 如果不使用代理但请求失败，直接返回None
+                    print("不使用代理的请求失败，不进行重试")
+                    return None
+    def request_old(self, url: str, proxy_enable: bool = True,
                 cookie: str = '', print_content: bool = False) -> Optional[BeautifulSoup]:
         """发送HTTP请求并处理代理"""
         headers = {

@@ -96,7 +96,8 @@ def process_duplicates():
             keep_movie, delete_movie = determine_movie_to_keep(
                 current_movie, previous_movie
             )
-            info(f"保留电影：{keep_movie.name},删除电影：{delete_movie.name}")
+            info(f"保留电影：{keep_movie.name},路径：{keep_movie.media_sources[0].path}")
+            info(f"删除电影：{delete_movie.name},路径：{delete_movie.media_sources[0].path}")
             # TODO: 取消注释以启用实际删除
             # result = jellyfin_util.delete_movie_by_id(movie_id=delete_movie.id)
             # if result:

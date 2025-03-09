@@ -10,6 +10,7 @@ from app.services import (
     GenreService, SeriesService, LabelService, ChartService,
     ChartTypeService, ChartEntryService, MagnetService, DownloadService, EverythingService, JellyfinService
 )
+from app.services.download_failure_service import DownloadFailureService
 from app.utils.download_client import DownloadStatus
 from app.utils.http_util import HttpUtil
 from app.utils.parser.parser_factory import ParserFactory
@@ -43,6 +44,7 @@ class ScraperService:
             'magnet': MagnetService(),
             'download': DownloadService(),
             'everything': EverythingService(),
+            'download_failure': DownloadFailureService(),
             'jellyfin': JellyfinService()
         }
         logger.info(f"已初始化 {len(self.service_map)} 个服务")
@@ -79,7 +81,7 @@ class ScraperService:
                     logger.info(f"跳过FC2类型条目: {entry.serial_number}")
                     continue
 
-                logger.debug(f"处理条目: {entry.serial_number},排行: {entry.rank}")
+                logger.debug(f"处理条目: {entry.serial_number},榜单: {chart.name}，排行: {entry.rank}/{len(chart_entries)}")
                 if movie := self._fetch_and_process_movie(entry):
                     self._save_chart_entry(entry, movie, chart.name)
                     logger.info(f"成功处理并保存条目: {entry.serial_number}")
@@ -354,7 +356,8 @@ class ScraperService:
                 logger.info(f"下载任务添加成功: {movie.serial_number}")
                 return DownloadStatus.DOWNLOADING.value
 
-            logger.warning(f"下载任务添加失败: {movie.serial_number}")
+            logger.warning(f"下载任务添加失败: {movie.serial_number},记录到待下载表")
+            self.service_map['download_failure'].add_download_failed(movie)
             return DownloadStatus.DOWNLOAD_FAILED.value
         except Exception as e:
             logger.error(f"处理电影下载状态时发生错误：{e}")

@@ -12,7 +12,9 @@ jellyfin:
 
 chart:
   markdown_reader: top_250 # normal or top_250
-
+  chart_type:
+    name: javdb_top2502 # javdb_top2502 or javbus
+    description: 'come from javdb' # come from javbus
 
 download_client:
   host: "192.168.31.45"
@@ -20,6 +22,7 @@ download_client:
   type: "qBittorrent"
   password: "adminadmin"
   download_folder: ""
+  add_torrent_max_retries: 100
 
 app:
   environment: testing
