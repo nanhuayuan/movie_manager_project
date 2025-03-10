@@ -21,7 +21,14 @@ download_client:
   type: "qBittorrent"
   port: 6363
   password: "adminadmin"
-  download_folder: "D:/Downloads/dev"
+  download_folder: ""
+
+chart:
+  chart_list_path: "data/chart_list/"
+  markdown_reader: normal # normal or top_250
+  chart_type:
+    name: javbus # javdb_top2502 or javbus
+    description: 'come from javbus' # come from javbus
 
 app:
   environment: development

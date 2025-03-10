@@ -329,7 +329,8 @@ class QBittorrentClient(BaseDownloadClient):
             self.client = qbittorrentapi.Client(
                 host=f"{self.host}:{self.port}",
                 username=self.username,
-                password=self.password
+                password=self.password,
+                SIMPLE_RESPONSES=True #客户端配置为始终仅返回简单的 JSON,否则性能为代价成本可能很高
             )
             self.client.auth_log_in()
             return True
@@ -361,10 +362,11 @@ class QBittorrentClient(BaseDownloadClient):
 
     def get_torrent_info_by_name(self, name: str) -> Optional[TorrentInfo]:
 
-        search_job = self.client.search.start(pattern=name, plugins="all", category="all")
-        status = search_job.status()
-        results = search_job.result()
-        search_job.delete()
+        #search_job = self.client.search.start(pattern=name, plugins="all", category="all")
+        search_job = self.client.search_start(pattern=name, plugins="all", category="all")
+        status = self.client.search_status(search_id=search_job['id'])
+        results = self.client.search_results(search_id=search_job['id'])
+        self.client.search_delete(search_id=search_job['id'])
         print(results)
         #torrent = self.client.torrents_info(torrent_hashes=torrent_hash)[0]
         return self._convert_to_torrent_info(results)
