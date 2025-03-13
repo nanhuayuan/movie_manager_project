@@ -1,6 +1,7 @@
 # main_remove_duplicate_movies_from_jellyfin.py
 from app.config.log_config import info, error, debug
 from app.main import create_app
+from app.services import JellyfinService
 from app.utils.jellyfin_util import JellyfinUtil
 
 
@@ -76,8 +77,8 @@ def process_duplicates():
     Returns:
         dict: 处理结果统计
     """
-    jellyfin_util = JellyfinUtil()
-    movies = jellyfin_util.get_all_movie_info()
+    jellyfin_service = JellyfinService()
+    movies = jellyfin_service.get_all_movies_info()
 
     stats = {
         "total_movies": len(movies),
@@ -89,7 +90,7 @@ def process_duplicates():
     for i, movie in enumerate(movies):
         info(f"正在处理第 {i + 1}/{len(movies)} 部电影：{movie.name}")
 
-        current_movie = jellyfin_util.get_movie_details(movie_id=movie.id)
+        current_movie = jellyfin_service.get_movie_details_by_id(movie_id=movie.id)
 
         if is_duplicate_movie(current_movie, previous_movie):
             stats["duplicates_found"] += 1
@@ -99,7 +100,7 @@ def process_duplicates():
             info(f"保留电影：{keep_movie.name},路径：{keep_movie.media_sources[0].path}")
             info(f"删除电影：{delete_movie.name},路径：{delete_movie.media_sources[0].path}")
             # TODO: 取消注释以启用实际删除
-            # result = jellyfin_util.delete_movie_by_id(movie_id=delete_movie.id)
+            # result = jellyfin_service.delete_movie_by_id(movie_id=delete_movie.id)
             # if result:
             #     info(f"已从Jellyfin中移除电影：{delete_movie.name}")
             #     stats["movies_deleted"] += 1

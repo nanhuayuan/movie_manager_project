@@ -1,104 +1,96 @@
-# app/services/jellyfin_service.py
-from app.utils.interfaces.jellyfin_util_interface import JellyfinUtilInterface
-from app.utils.jellyfin_util import JellyfinUtil
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Any
 import logging
+from app.config.app_config import AppConfig
+from app.utils.jellyfin_client import BaseJellyfinClient, JellyfinApiClient, JellyfinApiclientPythonClient
 
 
 class JellyfinService:
-    """
-    Jellyfin 服务类
-
-    该类提供了高级的 Jellyfin 相关服务，使用 JellyfinUtilInterface 的实现
-    来与 Jellyfin 服务器进行交互。
-
-    Attributes:
-        jellyfin_util (JellyfinUtilInterface): Jellyfin 工具接口的实现实例
-    """
-
-    def __init__(self, jellyfin_util: JellyfinUtilInterface = None):
-        """
-        初始化 Jellyfin 服务
-
-        Args:
-            jellyfin_util (JellyfinUtilInterface): Jellyfin 工具接口的实现实例
-        """
-        self.jellyfin_util = jellyfin_util if jellyfin_util is not None else JellyfinUtil()
+    def __init__(self):
+        self.config = AppConfig().get_jellyfin_config()
+        self.client = self._create_client()
+        self.retry_count = self.config.get('retry_count', 3)
         logging.info("Jellyfin 服务已初始化")
 
+    def _create_client(self) -> BaseJellyfinClient:
+        """创建 Jellyfin 客户端"""
+        client_type = self.config.get('client_type', 'api')
+        client_map = {
+            'jellyfinapi': JellyfinApiClient,
+            'jellyfin-apiclient-python': JellyfinApiclientPythonClient
+        }
+
+        client_class = client_map.get(client_type)
+        if not client_class:
+            raise ValueError(f"不支持的 Jellyfin 客户端类型: {client_type}")
+
+        return client_class(
+            api_url=self.config.get('api_url'),
+            api_key=self.config.get('api_key'),
+            user_id=self.config.get('user_id', ''),
+            item_id=self.config.get('item_id', ''),
+            playlists_id=self.config.get('playlists_id', '')
+        )
+
+    def _retry_operation(self, operation, *args, **kwargs):
+        """执行操作并在失败时重试"""
+        for attempt in range(self.retry_count):
+            try:
+                return operation(*args, **kwargs)
+            except Exception as e:
+                if attempt == self.retry_count - 1:
+                    logging.error(f"操作失败，已尝试 {self.retry_count} 次: {str(e)}")
+                    raise
+                logging.warning(f"操作失败，正在重试 ({attempt + 1}/{self.retry_count}): {str(e)}")
+        return None
+
     def check_movie_exists(self, title: str) -> bool:
-        """
-        检查指定标题的电影是否存在于 Jellyfin 库中
-
-        Args:
-            title (str): 要检查的电影标题
-
-        Returns:
-            bool: 如果电影存在返回 True，否则返回 False
-
-        Example:
-            >>> service = JellyfinService(jellyfin_util)
-            >>> service.check_movie_exists("The Matrix")
-            True
-        """
-        # 使用工具接口搜索电影
-        movie = self.search_by_serial_number(serial_number=title)
-        exists = movie is not None
-
-        # 记录搜索结果
+        """检查电影是否存在于 Jellyfin 库中"""
+        movies = self._retry_operation(self.search_by_serial_number, title)
+        exists = movies is not None
         logging.info(f"电影 '{title}' {'存在' if exists else '不存在'} 于 Jellyfin 库中")
         return exists
 
+    def search_movie(self, title: str, user_id: str = '') -> Optional[Dict]:
+        """搜索电影"""
+        return self._retry_operation(self.client.search_movie, title, user_id)
+
     def get_movie_info(self, title: str) -> Optional[Dict]:
-        """
-        获取指定标题电影的详细信息
-
-        Args:
-            title (str): 要获取信息的电影标题
-
-        Returns:
-            Optional[Dict]: 如果找到电影，返回包含电影详细信息的字典；否则返回 None
-
-        Example:
-            >>> service = JellyfinService(jellyfin_util)
-            >>> info = service.get_movie_info("The Matrix")
-            >>> print(info['Name'])
-            'The Matrix'
-        """
-        # 首先搜索电影
-        movie = self.jellyfin_util.search_movie(title)
-
-        # 如果找到电影且包含 ID，则获取详细信息
-        if movie and 'Id' in movie:
-            return self.jellyfin_util.get_movie_details(movie['Id'])
-
-        # 如果未找到电影，记录日志并返回 None
+        """获取电影信息"""
+        movie = self._retry_operation(self.client.search_movie, title)
+        if movie and ('Id' in movie or 'id' in movie):
+            movie_id = movie.get('Id', movie.get('id'))
+            return self._retry_operation(self.client.get_movie_details, movie_id)
         logging.info(f"未能获取电影 '{title}' 的信息")
         return None
 
-    def get_all_movies_info(self) -> List[Dict]:
-        """
-        获取 Jellyfin 库中所有电影的信息
-
-        Returns:
-            List[Dict]: 包含所有电影信息的字典列表
-
-        Example:
-            >>> service = JellyfinService(jellyfin_util)
-            >>> all_movies = service.get_all_movies_info()
-            >>> print(len(all_movies))
-            42
-        """
-        # 获取所有电影信息
-        movies = self.jellyfin_util.get_all_movie_info()
-
-        # 记录获取到的电影数量
+    def get_all_movies_info(self, user_id: str = '') -> List[Dict]:
+        """获取所有电影信息"""
+        movies = self._retry_operation(self.client.get_all_movie_info, user_id)
         logging.info(f"获取到 {len(movies)} 部电影的信息")
         return movies
 
-    def search_by_serial_number(self, serial_number: str, user_id: str = '') -> str:
-        """
-        根据番号搜索电影。
-        """
+    def get_movie_details_by_id(self, movie_id,user_id: str = '') -> List[Dict]:
+        """获取所有电影信息"""
+        movie = self._retry_operation(self.client.get_movie_details, movie_id)
+        logging.info(f"获取到 {movie.name} 电影的信息")
+        return movie
 
-        return self.jellyfin_util.search_by_serial_number(serial_number, user_id)
+    def delete_movie_by_id(self, movie_id: str, user_id: str = '') -> bool:
+        """根据ID删除电影"""
+        return self._retry_operation(self.client.delete_movie_by_id, movie_id, user_id)
+
+    def search_by_serial_number(self, serial_number: str, user_id: str = '') -> List:
+        """根据序列号搜索电影"""
+        return self._retry_operation(self.client.search_by_serial_number, serial_number, user_id)
+
+    def get_existing_playlists(self, user_id: str = '') -> List[Dict[str, Any]]:
+        """获取现有播放列表"""
+        return self._retry_operation(self.client.get_existing_playlists, user_id)
+
+    def get_playlist_id(self, playlist_name: str, user_id: str = '') -> str:
+        """获取播放列表ID，如果不存在则创建"""
+        return self._retry_operation(self.client.get_playlist_id, playlist_name, user_id)
+
+    def add_to_playlist(self, playlist_id: str, ids: str, user_id: str = '') -> bool:
+        """将电影添加到播放列表"""
+        return self._retry_operation(self.client.add_to_playlist, playlist_id, ids, user_id)

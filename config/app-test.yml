@@ -9,6 +9,7 @@ jellyfin:
   user_id: 'b128da17dbf5412bac37c096e25f2de5'
   item_id: 'ab532873de6a4fcd09ca15f5d59cd55a'
   playlists_id: '953141ca3d64b4e0bf3ff52b29bcbbab'
+  client_type: jellyfinapi # jellyfinapi or jellyfin-apiclient-python
 
 chart:
   markdown_reader: top_250 # normal or top_250
@@ -22,7 +23,7 @@ download_client:
   type: "qBittorrent"
   password: "adminadmin"
   download_folder: ""
-  add_torrent_max_retries: 100
+  retry_count: 20
 
 app:
   environment: testing

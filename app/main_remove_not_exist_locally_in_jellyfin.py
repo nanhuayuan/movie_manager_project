@@ -1,6 +1,6 @@
 from app.config.log_config import info, error, debug, warning
 from app.main import create_app
-from app.services import EverythingService
+from app.services import EverythingService, JellyfinService
 from app.utils.jellyfin_util import JellyfinUtil
 from typing import Dict, Optional
 import os
@@ -57,8 +57,8 @@ def process_missing_movies(check_path: bool = False) -> Dict:
         Dict: 处理结果统计信息
     """
     everything_service = EverythingService()
-    jellyfin_util = JellyfinUtil()
-    movies = jellyfin_util.get_all_movie_info()
+    jellyfin_service = JellyfinService()
+    movies = jellyfin_service.get_all_movies_info()
 
     stats = {
         "total_movies": len(movies),
@@ -75,7 +75,7 @@ def process_missing_movies(check_path: bool = False) -> Dict:
         try:
             debug(f"正在检查第 {i + 1}/{stats['total_movies']} 部电影：{movie.name}")
 
-            current_movie = jellyfin_util.get_movie_details(movie_id=movie.id)
+            current_movie = jellyfin_service.get_movie_details(movie_id=movie.id)
             # 电影路径
             movie_path = current_movie.path
             info(f"电影 {movie.name} ，路径{movie_path}")
@@ -106,7 +106,7 @@ def process_missing_movies(check_path: bool = False) -> Dict:
                 info(f"电影 {movie.name} 在本地不存在或不满足要求")
                 try:
                     # TODO: 取消注释以启用实际删除
-                    # result = jellyfin_util.delete_movie_by_id(movie_id=movie.id)
+                    # result = jellyfin_service.delete_movie_by_id(movie_id=movie.id)
                     # if result:
                     #     stats["deleted_entries"] += 1
                     #     info(f"已从Jellyfin中移除电影: {movie.name}")
