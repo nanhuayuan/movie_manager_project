@@ -59,6 +59,21 @@ class TorrentInfo:
     num_peers: int  # 连接节点数
     magnet_uri: Optional[str]  # 磁力链接
 
+    added_on: int  # 添加时间戳
+    time_active: int  # 活跃时间(秒)
+    ratio_limit: float  # 分享率限制
+    completed: int  # 已完成大小(bytes)
+    completion_on: int  # 完成时间戳
+    category: str  # 种子分类
+    tags: str  # 标签
+    priority: int  # 下载优先级
+    ratio_value: float  # 当前分享率
+    seeding_time: int  # 做种时间(秒)
+    seeding_time_limit: int  # 做种时间限制(秒)
+    tracker: str  # 主Tracker
+    trackers_count: int  # Tracker数量
+    availability: float  # 可用性
+
     @property
     def progress_str(self) -> str:
         """获取进度百分比字符串"""
@@ -97,6 +112,56 @@ class TorrentInfo:
     def is_slow(self, min_speed: int) -> bool:
         """检查下载速度是否低于指定值"""
         return self.download_speed < min_speed
+
+    @property
+    def ratio(self) -> float:
+        """获取上传/下载比例"""
+        if self.downloaded == 0:
+            return 0
+        return self.uploaded / self.downloaded
+
+    def format_completion_time(self, completion_timestamp: int) -> str:
+        """格式化完成时间"""
+        if completion_timestamp <= 0:
+            return "未完成"
+        import datetime
+        dt = datetime.datetime.fromtimestamp(completion_timestamp)
+        return dt.strftime("%Y-%m-%d %H:%M:%S")
+
+    @property
+    def eta_str(self) -> str:
+        """获取预计剩余时间的人类可读形式"""
+        if self.download_speed == 0:
+            return "无限"
+
+        remaining_bytes = self.size - self.downloaded
+        seconds = remaining_bytes / self.download_speed
+
+        if seconds < 60:
+            return f"{int(seconds)}秒"
+        elif seconds < 3600:
+            return f"{int(seconds / 60)}分钟"
+        elif seconds < 86400:
+            return f"{int(seconds / 3600)}小时"
+        else:
+            return f"{int(seconds / 86400)}天"
+
+    @property
+    def is_completed(self) -> bool:
+        """检查是否已完成下载"""
+        return self.progress >= 0.999  # 用0.999而不是1可以处理一些舍入误差
+
+    @property
+    def health_status(self) -> str:
+        """获取种子健康状态"""
+        if self.num_seeds == 0 and self.num_peers == 0:
+            return "无连接"
+        elif self.num_seeds >= 5:
+            return "健康"
+        elif self.num_seeds > 0:
+            return "一般"
+        else:
+            return "较差"
 
 @dataclass
 class DownloadHistory:
@@ -178,6 +243,10 @@ class BaseDownloadClient(ABC):
         """根据名称取种子信息"""
         pass
 
+    @abstractmethod
+    def get_torrent_info_by_hash(self, hash: str) -> Optional[TorrentInfo]:
+        """根据hash取种子信息"""
+        pass
     @abstractmethod
     def get_all_torrents(self) -> List[TorrentInfo]:
         """获取所有种子信息"""
@@ -362,14 +431,16 @@ class QBittorrentClient(BaseDownloadClient):
 
     def get_torrent_info_by_name(self, name: str) -> Optional[TorrentInfo]:
 
-        #search_job = self.client.search.start(pattern=name, plugins="all", category="all")
-        search_job = self.client.search_start(pattern=name, plugins="all", category="all")
-        status = self.client.search_status(search_id=search_job['id'])
-        results = self.client.search_results(search_id=search_job['id'])
-        self.client.search_delete(search_id=search_job['id'])
-        print(results)
-        #torrent = self.client.torrents_info(torrent_hashes=torrent_hash)[0]
-        return self._convert_to_torrent_info(results)
+        for torrent in self.get_all_torrents():
+            if name.lower() in torrent.name.lower():
+                return torrent
+        return None
+
+    def get_torrent_info_by_hash(self, hash: str) -> Optional[TorrentInfo]:
+        """根据hash取种子信息"""
+        #torrent = self.client.torrents_info(torrent_hashes=hash)[0]
+        torrent = self.client.torrents_piece_hashes(torrent_hash=hash)
+        return self._convert_to_torrent_info(torrent)
 
     def get_all_torrents(self) -> List[TorrentInfo]:
         return [self._convert_to_torrent_info(t) for t in self.client.torrents_info()]
@@ -390,19 +461,35 @@ class QBittorrentClient(BaseDownloadClient):
         }
 
         return TorrentInfo(
-            hash=torrent.hash,
-            name=torrent.name,
-            size=torrent.size,
-            progress=torrent.progress,
-            download_speed=torrent.dlspeed,
-            upload_speed=torrent.upspeed,
-            status=status_map.get(torrent.state, DownloadStatus.ERROR),
-            save_path=torrent.save_path,
-            downloaded=torrent.downloaded,
-            uploaded=torrent.uploaded,
-            num_seeds=torrent.num_seeds,
-            num_peers=torrent.num_peers,
-            magnet_uri=torrent.magnet_uri
+            hash=torrent['hash'],
+            name=torrent['name'],
+            size=torrent['size'],
+            progress=torrent['progress'],
+            download_speed=torrent['dlspeed'],
+            upload_speed=torrent['upspeed'],
+            status=status_map.get(torrent['state'], DownloadStatus.ERROR),
+            save_path=torrent['save_path'],
+            downloaded=torrent['downloaded'],
+            uploaded=torrent['uploaded'],
+            num_seeds=torrent['num_seeds'],
+            num_peers=torrent['num_incomplete'],  #  使用num_incomplete作为peers数
+            magnet_uri=torrent['magnet_uri'],
+
+            # 新增属性
+            added_on=torrent['added_on'],
+            time_active=torrent['time_active'],
+            ratio_limit=torrent['ratio_limit'],
+            completed=torrent['completed'],
+            completion_on=torrent['completion_on'],
+            category=torrent['category'],
+            tags=torrent['tags'],
+            priority=torrent['priority'],
+            ratio_value=torrent['ratio'],
+            seeding_time=torrent['seeding_time'],
+            seeding_time_limit=torrent['seeding_time_limit'],
+            tracker=torrent['tracker'],
+            trackers_count=torrent['trackers_count'],
+            availability=torrent['availability']
         )
 
     # 已有的方法保持不变...

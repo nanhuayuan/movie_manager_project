@@ -339,17 +339,20 @@ class ScraperService:
                 logger.warning(f"电影无可用磁力链接: {movie.serial_number}")
                 return DownloadStatus.NO_SOURCE.value
 
-            status = self.service_map['download'].get_download_status(movie.serial_number)
+            magnet = movie.magnets[0]
+            magnet_link = f"magnet:?xt=urn:btih:{magnet.magnet_xt}"
+
+            status = self.service_map['download'].get_download_status(name = movie.serial_number,hash=magnet)
             logger.debug(f"当前下载状态: {status}")
 
             # 已完成状态直接返回
             if status in [DownloadStatus.COMPLETED.value, DownloadStatus.IN_LIBRARY.value]:
                 logger.info(f"电影下载状态已完成: {movie.serial_number}")
                 return status
-
+            elif status <= DownloadStatus.COMPLETED.value and status >= DownloadStatus.QUEUED.value:
+                logger.info(f"电影正在下载中: {movie.serial_number}")
+                return status
             # 添加下载任务
-            magnet = movie.magnets[0]
-            magnet_link = f"magnet:?xt=urn:btih:{magnet.magnet_xt}"
             logger.info(f"准备添加下载任务: {magnet_link}")
 
             if self.service_map['download'].add_download(magnet_link):

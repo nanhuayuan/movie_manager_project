@@ -8,8 +8,13 @@ from typing import Optional, List, Callable, Dict
 from datetime import datetime, timedelta
 import threading
 import time
+from app.config.log_config import info, error
 import schedule
 from dataclasses import dataclass
+import re
+
+from app.utils.magnet_util import MagnetUtil
+
 
 @dataclass
 class ScheduledTask:
@@ -38,6 +43,8 @@ class DownloadService:
         self.max_retries = self.config.get('add_torrent_max_retries', 3)
         self.client = self.create_client()
         self.client.connect()
+
+        self.magnet_util = MagnetUtil()
 
         self._scheduled_tasks: Dict[str, ScheduledTask] = {}
         self._scheduler_thread = None
@@ -585,15 +592,42 @@ class DownloadService:
             'total_downloaded': sum(t.downloaded for t in downloads)
         }
 
-    def get_download_status(self, serial_number: str) -> int:
-        """获取指定的内容的现在状态"""
-        pass
+    def get_download_status(self, name: str = None, hash: str = None) -> int:
+        """
+        获取指定内容的下载状态
+
+        参数:
+        name (str, 可选): 下载内容的名称
+        hash (str, 可选): 下载内容的哈希值
+
+        返回:
+        int: 表示下载状态的整数值，如果查询失败则返回DOWNLOAD_FAILED状态
+
+        异常:
+        ValueError: 当name和hash参数都未提供时抛出
+        """
+        # 检查是否提供了name或hash参数
+        if name is None and hash is None:
+            raise ValueError("必须提供name或hash参数之一")
+
+        try:
+            # 简化逻辑，使用更直接的条件判断
+            torrent = self.get_torrent_by_hash(hash) if hash else self.get_torrent_by_name(name)
+
+            # 如果找到了种子，返回其状态；否则返回下载失败状态
+            return torrent.status if torrent else DownloadStatus.DOWNLOAD_FAILED
+
+        except Exception as e:
+            error(f"查询种子下载状态失败: {str(e)}")
+            return DownloadStatus.DOWNLOAD_FAILED
+
+
     def cleanup_old(self):
         """清理下载服务，断开连接"""
         if self.client:
             self.client.disconnect()
 
-    def get_torrent_by_name(self, movie_name: str) -> Optional[TorrentInfo]:
+    def get_torrent_by_name(self, name: str) -> Optional[TorrentInfo]:
         """根据电影名称搜索下载任务
 
         Args:
@@ -603,11 +637,17 @@ class DownloadService:
             Optional[TorrentInfo]: 找到的种子信息，未找到返回None
         """
 
-        aaa = self.client.get_torrent_info_by_name(name=movie_name)
+        #aaa = self.client.get_torrent_info_by_name(name=movie_name)
         for torrent in self.get_all_downloads():
-            if movie_name.lower() in torrent.name.lower():
+            if name.lower() in torrent.name.lower():
                 return torrent
         return None
+
+    def get_torrent_by_hash(self, hash: str) -> Optional[TorrentInfo]:
+        """根据哈希值搜索下载任务"""
+        hash_new = self.magnet_util.extract_hash(input_string=hash)
+        torrent = self.client.get_torrent_info_by_hash(hash_new)
+        return torrent
 
     def check_magnet_availability(self, magnet: str) -> bool:
         """检查磁力链接是否可用

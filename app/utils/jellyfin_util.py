@@ -171,7 +171,7 @@ class JellyfinUtil(JellyfinUtilInterface):
         self.logger.info(f"成功获取电影 {movie_id} 的详细信息")
         return details
 
-    def delete_movie_by_id(self, movie_id: str) -> bool:
+    def delete_movie_by_id(self, movie_id: str,user_id: str = '') -> bool:
         """
         根据 ID 删除指定的电影。
 
@@ -285,7 +285,7 @@ class JellyfinUtil(JellyfinUtilInterface):
         :param user_id: 用户 ID
         :return: 如果找到匹配的电影，返回电影 ID；否则返回 None
         """
-        
+
         user_id, _ = self._get_default_user_id_and_item_id(user_id, item_id='')
         self.logger.info(f"正在搜索番号 '{serial_number}'")
 

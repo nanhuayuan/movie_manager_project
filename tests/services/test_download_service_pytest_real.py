@@ -13,7 +13,7 @@ from app.utils.download_client import TorrentInfo, DownloadStatus, DownloadClien
 def mock_config():
     """mock配置"""
 
-    os.environ['APP_ENV'] = 'test'
+    os.environ['APP_ENV'] = 'dev'
     return AppConfig()
 
 
@@ -42,7 +42,7 @@ def mock_torrent_info():
 @pytest.fixture
 def mock_service():
     """mock下载服务"""
-    os.environ['APP_ENV'] = 'test'
+    os.environ['APP_ENV'] = 'dev'
     return DownloadService()
 
 
@@ -54,9 +54,9 @@ class TestDownloadService:
         """测试添加下载"""
         service = DownloadService()
         magnet = 'magnet:?xt=urn:btih:90cee4de68ac0362196d082d120fc656cf27bf64'
-        save_path = '/downloads'
+        #save_path = '/downloads'
 
-        result = service.add_download(magnet, save_path)
+        result = service.add_download(magnet)
         print(result)
 
 
