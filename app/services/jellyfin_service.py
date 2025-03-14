@@ -82,7 +82,10 @@ class JellyfinService:
     def search_by_serial_number(self, serial_number: str, user_id: str = '') -> List:
         """根据序列号搜索电影"""
         return self._retry_operation(self.client.search_by_serial_number, serial_number, user_id)
-
+    def get_one_by_serial_number(self, serial_number: str, user_id: str = '') -> List:
+        """根据序列号搜索获得一部电影"""
+        movies = self.search_by_serial_number(serial_number, user_id)
+        return movies[0] if movies else None
     def get_existing_playlists(self, user_id: str = '') -> List[Dict[str, Any]]:
         """获取现有播放列表"""
         return self._retry_operation(self.client.get_existing_playlists, user_id)

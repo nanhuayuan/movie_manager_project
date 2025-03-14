@@ -12,6 +12,7 @@ from app.main_add_chart_to_db import run_scraper
 from app.main_add_to_playlists import process_charts
 from app.main_remove_duplicate_movies_from_jellyfin import process_duplicates
 from app.main_remove_not_exist_locally_in_jellyfin import process_missing_movies
+from app.main_restart_downloads import process_restart_downloads
 from app.services import DownloadService
 from app.utils.db_util import get_db, init_app
 from app.utils.download_client import TransmissionClient
@@ -122,6 +123,13 @@ def test_remove_missing_movies(app, session, scraper_service):
         result = process_missing_movies()
         debug(f"处理结果：{result}")
 
+def test_restart_downloads(app, session, scraper_service):
+    """重新下载电影"""
+    with app.app_context():
+        info("开始测试：重新下载电影")
+        result = process_restart_downloads()
+        debug(f"处理结果：{result}")
+
 
 def test_check_torrent_info(app, session, scraper_service):
     """
@@ -142,9 +150,13 @@ def test_check_torrent_info(app, session, scraper_service):
 
         service = DownloadService()
 
-        torrentInfo_bglb = service.get_torrent_by_name('报告老板')
+        #torrentInfo_bglb = service.get_download_status(name = '报告老板')
+        torrentInfo_hash = service.get_download_status(hash = '42a313020857858050befa6a1431748bb8d532d9')
+        #torrentInfo_hash = service.get_download_status(hash = 'magnet:?xt=urn:btih:42a313020857858050befa6a1431748bb8d532d9&dn=%e6%8a%a5%e5%91%8a%e8%80%81%e6%9d%bf')
+        #torrentInfo_bglb = service.get_torrent_by_name('2')
 
-        print(torrentInfo_bglb)
+        #print(torrentInfo_bglb)
+        print(torrentInfo_hash)
 
 
         # 批量添加下载任务
