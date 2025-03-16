@@ -1,6 +1,8 @@
 from datetime import datetime, date, time
 from decimal import Decimal
 
+from sqlalchemy.orm import validates
+
 from app.utils.db_util import db
 
 
@@ -60,16 +62,63 @@ class Chart(DBBaseModel):
     file_name = ""
     file_path = ""
 
+
 class ChartEntry(DBBaseModel):
     __tablename__ = 'chart_entry'
-    name = db.Column(db.String(256, 'utf8mb4_unicode_ci'), nullable=False, server_default=db.text("''"))
+    name = db.Column(db.String(1024, 'utf8mb4_unicode_ci'), nullable=False, server_default=db.text("''"))
     chart_id = db.Column(db.Integer, db.ForeignKey('chart.id'), nullable=False)
-    movie_id = db.Column(db.Integer, db.ForeignKey('movie.id'), nullable=False, server_default=db.text("'0'"))
+    entity_type = db.Column(db.String(32, 'utf8mb4_unicode_ci'), nullable=False, server_default=db.text("'movie'"))
+    movie_id = db.Column(db.Integer, db.ForeignKey('movie.id'), nullable=True)
+    actor_id = db.Column(db.Integer, db.ForeignKey('actor.id'), nullable=True)
     rank = db.Column(db.Integer, nullable=False, server_default=db.text("'0'"))
     score = db.Column(db.Float(4), nullable=False, server_default=db.text("'0.00'"))
     votes = db.Column(db.Integer, nullable=False, server_default=db.text("'0'"))
+
+    # 关系定义
     chart = db.relationship("Chart", back_populates="entries")
     movie = db.relationship("Movie", back_populates="chart_entries")
+    # 修改后的代码
+    actor = db.relationship("Actor", back_populates="chart_entries")
+
+    # 添加验证逻辑
+    @validates('entity_type', 'movie_id', 'actor_id')
+    def validate_entity_relations(self, key, value):
+        if key == 'entity_type' and value not in ('movie', 'actor'):
+            raise ValueError("entity_type必须是'movie'或'actor'")
+
+        if key == 'entity_type':
+            # 如果改变实体类型为movie，清除actor_id
+            if value == 'movie' and self.actor_id is not None:
+                self.actor_id = None
+            # 如果改变实体类型为actor，清除movie_id
+            elif value == 'actor' and self.movie_id is not None:
+                self.movie_id = None
+
+        if key == 'movie_id' and value is not None:
+            # 设置movie_id时，确保entity_type为movie，且清除actor_id
+            if getattr(self, 'entity_type', 'movie') != 'movie':
+                self.entity_type = 'movie'
+            if getattr(self, 'actor_id', None) is not None:
+                self.actor_id = None
+
+        if key == 'actor_id' and value is not None:
+            # 设置actor_id时，确保entity_type为actor，且清除movie_id
+            if getattr(self, 'entity_type', 'actor') != 'actor':
+                self.entity_type = 'actor'
+            if getattr(self, 'movie_id', None) is not None:
+                self.movie_id = None
+
+        return value
+
+    # 添加验证方法，在保存前检查
+    @staticmethod
+    def before_commit(session):
+        for obj in session.new:
+            if isinstance(obj, ChartEntry):
+                if obj.entity_type == 'movie' and (obj.movie_id is None or obj.actor_id is not None):
+                    raise ValueError("movie类型的条目必须指定movie_id且不能指定actor_id")
+                if obj.entity_type == 'actor' and (obj.actor_id is None or obj.movie_id is not None):
+                    raise ValueError("actor类型的条目必须指定actor_id且不能指定movie_id")
 
     uri = ""
     serial_number = ''
@@ -189,6 +238,8 @@ class Actor(DBBaseModel, BaseMixin):
     pic = db.Column(db.String(128, 'utf8mb4_unicode_ci'), server_default=db.text("''"))
     favorite = db.Column(db.SmallInteger, nullable=False, server_default=db.text("'0'"))
     movies = db.relationship("Movie", secondary=relation_tables['movie_actor'], back_populates="actors")
+    chart_entries = db.relationship("ChartEntry", back_populates="actor")
+
 
 
 class DownloadFailure(DBBaseModel):
