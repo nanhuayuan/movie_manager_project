@@ -75,7 +75,7 @@ def process_missing_movies(check_path: bool = False) -> Dict:
         try:
             debug(f"正在检查第 {i + 1}/{stats['total_movies']} 部电影：{movie.name}")
 
-            current_movie = jellyfin_service.get_movie_details(movie_id=movie.id)
+            current_movie = jellyfin_service.get_movie_details_by_id(movie_id=movie.id)
             # 电影路径
             movie_path = current_movie.path
             info(f"电影 {movie.name} ，路径{movie_path}")
@@ -97,7 +97,7 @@ def process_missing_movies(check_path: bool = False) -> Dict:
                     debug(f"电影文件存在于路径: {movie_path}")
                     file_exists = True
                 else:
-                    warning(f"电影文件在路径 {movie_path} 不存在")
+                    warning(f"电影文件在路径 {movie_path}不 存在")
                     # 路径不存在，使用Everything搜索作为备份
                     file_exists = _check_with_everything(everything_service, movie, check_path)
 

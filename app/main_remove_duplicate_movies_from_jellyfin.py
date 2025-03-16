@@ -19,8 +19,8 @@ def is_duplicate_movie(current_movie, previous_movie):
     if not previous_movie:
         return False
 
-    current_id = current_movie.name.split(".")[0]
-    previous_id = previous_movie.name.split(".")[0]
+    current_id = current_movie.name.split(" ")[0]
+    previous_id = previous_movie.name.split(" ")[0]
 
     is_duplicate = current_id == previous_id
     if is_duplicate:
@@ -100,10 +100,10 @@ def process_duplicates():
             info(f"保留电影：{keep_movie.name},路径：{keep_movie.media_sources[0].path}")
             info(f"删除电影：{delete_movie.name},路径：{delete_movie.media_sources[0].path}")
             # TODO: 取消注释以启用实际删除
-            # result = jellyfin_service.delete_movie_by_id(movie_id=delete_movie.id)
-            # if result:
-            #     info(f"已从Jellyfin中移除电影：{delete_movie.name}")
-            #     stats["movies_deleted"] += 1
+            result = jellyfin_service.delete_movie_by_id(movie_id=delete_movie.id)
+            if result:
+                info(f"已从Jellyfin中移除电影：{delete_movie.name}")
+                stats["movies_deleted"] += 1
 
             previous_movie = keep_movie
         else:
