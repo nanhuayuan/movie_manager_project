@@ -1,7 +1,7 @@
 # app-test.yml - 测试环境特定配置
 database:
   password: "123456"
-  dbname: movie
+  dbname: movie2
 
 jellyfin:
   api_url: "http://192.168.31.45:8096"
@@ -13,10 +13,14 @@ jellyfin:
   client_type: jellyfinapi # jellyfinapi or jellyfin-apiclient-python
 
 chart:
-  markdown_reader: top_250 # normal or top_250
+  markdown_reader: normal # normal or top_250
   chart_type:
-    name: javdb_top2502 # javdb_top2502 or javbus
-    description: 'come from javdb' # come from javbus
+    name: "Z师傅" # javdb_top2502 or javbus
+    description: 'come from javbus' # come from javbus
+  chart_content:
+    entity_type: actor # movie or actor
+    actor_min_evaluations: 200  # 演员电影的最低评价人数
+    actor_sort_type: 4  # 演员页面的排序方式：1-评分，2-热度，3-想看人数，4-看过人数
 
 download_client:
   host: "192.168.31.45"
