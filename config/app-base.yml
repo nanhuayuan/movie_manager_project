@@ -28,7 +28,11 @@ web_scraper:
   user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
   timeout_seconds: 120
   retry_attempts: 10
+  from: javdb
   javdb_url: "https://javdb.com"
+  javdb_actor_search_uri: /search?q=%s&f=actor
+  javdb_actor_detail_uri: /xxx?q=%s&f=actor
+  javbus_url: "https://www.javbus.com"
   proxy:
     enable: True
     host: 127.0.0.1
@@ -51,6 +55,13 @@ chart:
   chart_type:
     name: javbus # javdb_top2502 or javbus
     description: 'come from javbus' # come from javbus
+  chart_content:
+    entity_type: movie
+    actor_min_evaluations: 200,  # 演员电影的最低评价人数
+    actor_sort_type: 4,  # 演员页面的排序方式：1-评分，2-热度，3-想看人数，4-看过人数
+
+
+
 
 app:
   name: MovieListDownloader

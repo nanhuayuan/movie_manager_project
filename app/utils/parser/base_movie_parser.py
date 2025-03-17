@@ -44,6 +44,30 @@ class BaseMovieParser(ABC):
         """
         pass
 
+    @abstractmethod
+    def parse_actor_search_results(self, html_content):
+        """
+        解析演员搜索结果页面
+        返回演员列表，每个演员包含名称、URI和照片链接
+        """
+        pass
+
+    @abstractmethod
+    def parse_actor_page_info(self, html_content):
+        """
+        解析演员页面信息，获取电影数量和最大页数
+        返回 (电影数量, 最大页数)
+        """
+        pass
+
+    @abstractmethod
+    def parse_actor_movies_page(self, html_content, min_evaluations=200):
+        """
+        解析演员电影页面，返回符合条件的电影列表
+        """
+        pass
+
+
     def supports_feature(self, feature_name: str) -> bool:
         """
         检查是否支持特定功能

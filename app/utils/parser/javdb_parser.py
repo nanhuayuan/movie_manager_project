@@ -504,4 +504,111 @@ class JavdbParser(BaseMovieParser):
             error(f"提取电影代码和标题时出现错误: {e}")
             return "", ""
 
-    #------------------------------- Search Results ----end----------------------
+    #------------------------------- Search actor ----start----------------------
+    def parse_actor_search_results(self, html_content):
+        """
+        解析演员搜索结果页面
+        返回演员列表，每个演员包含名称、URI和照片链接
+        """
+        results = []
+        try:
+            soup = BeautifulSoup(html_content, 'html.parser')
+            actors_div = soup.find('div', id='actors')
+
+            if not actors_div:
+                warning("未找到演员搜索结果区域")
+                return results
+
+            for actor_tag in actors_div.find_all('a'):
+                actor_info = {
+                    'name': actor_tag.get('title', ''),
+                    'uri': actor_tag.get('href', ''),
+                    'photo': actor_tag.find('img').get('src', '') if actor_tag.find('img') else ''
+                }
+                results.append(actor_info)
+
+            return results
+        except Exception as e:
+            error(f"解析演员搜索结果出错: {str(e)}")
+            return results
+
+    def parse_actor_page_info(self, html_content):
+        """
+        解析演员页面信息，获取电影数量和最大页数
+        返回 (电影数量, 最大页数)
+        """
+        try:
+            soup = BeautifulSoup(html_content, 'html.parser')
+
+            # 获取电影总数
+            section_meta = soup.find('span', class_='section-meta')
+            movie_count = 0
+            if section_meta and section_meta.contents:
+                numbers = re.findall(r'\d+', section_meta.contents[-1])
+                if numbers:
+                    movie_count = int(numbers[0])
+
+            # 获取最大页数
+            max_page = 1
+            pagination_links = soup.find_all('a', class_='pagination-link')
+            if pagination_links:
+                try:
+                    max_page = int(pagination_links[-1].text)
+                except (ValueError, IndexError):
+                    max_page = 1
+
+            return movie_count, max_page
+        except Exception as e:
+            error(f"解析演员页面信息失败: {str(e)}")
+            return 0, 1
+
+    def parse_actor_movies_page(self, html_content, min_evaluations=200):
+        """
+        解析演员电影页面，返回符合条件的电影列表
+        """
+        movies = []
+        try:
+            soup = BeautifulSoup(html_content, 'html.parser')
+
+            for movie_tag in soup.find_all('div', class_='item'):
+                try:
+                    # 获取评分和评价人数
+                    score_stars_tag = movie_tag.find('span', class_='value')
+                    if not score_stars_tag:
+                        continue
+
+                    # 提取评分和评价人数
+                    score_and_stars = re.findall(r'\d+\.\d+|\d+', score_stars_tag.text)
+                    if len(score_and_stars) <= 1 or int(score_and_stars[1]) <= min_evaluations:
+                        continue
+
+                    # 获取电影代码
+                    code_tag = movie_tag.find('strong')
+                    if not code_tag:
+                        continue
+
+                    code = code_tag.text
+                    if code.startswith("FC2"):
+                        continue
+
+                    # 获取电影URI和标题
+                    movie_link = movie_tag.find('a')
+                    if not movie_link:
+                        continue
+
+                    movie_info = {
+                        'code': code,
+                        'title': movie_link.get('title', ''),
+                        'uri': movie_link.get('href', '')
+                    }
+                    movies.append(movie_info)
+                except Exception as e:
+                    error(f"解析单个电影信息失败: {str(e)}")
+                    continue
+
+            return movies
+        except Exception as e:
+            error(f"解析演员电影页面失败: {str(e)}")
+            return []
+
+    #------------------------------- Search actor ----end----------------------
