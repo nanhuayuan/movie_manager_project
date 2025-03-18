@@ -22,6 +22,9 @@ chart:
     actor_min_evaluations: 200  # 演员电影的最低评价人数
     actor_sort_type: 4  # 演员页面的排序方式：1-评分，2-热度，3-想看人数，4-看过人数
 
+web_scraper:
+  cookie: ''
+
 download_client:
   host: "192.168.31.45"
   port: 6363
