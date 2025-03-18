@@ -53,6 +53,7 @@ class ParserFactory:
             full_module_path = f"app.utils.parser.{module_name}"
 
             try:
+                debug(f"Attempting to import module: {full_module_path}")
                 module = importlib.import_module(full_module_path)
                 for name, obj in inspect.getmembers(module):
                     if (inspect.isclass(obj) and
@@ -64,8 +65,12 @@ class ParserFactory:
                             info(f"Successfully registered parser: {name} for source: {source_name}")
                         else:
                             warning(f"Parser validation failed for {name}")
+            except ImportError as ie:
+                error(f"Import error for module {module_name}: {ie}")
             except Exception as e:
                 error(f"Failed to load parser module {module_name}: {e}")
+                import traceback
+                error(traceback.format_exc())
 
     @classmethod
     def validate_parser(cls, parser_cls: Type['BaseMovieParser']) -> bool:

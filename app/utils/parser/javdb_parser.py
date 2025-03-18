@@ -1,7 +1,7 @@
 import re
 from datetime import datetime
 from typing import List, Tuple, Optional
-
+from typing import Dict, List, Optional, Any
 from bs4 import BeautifulSoup
 
 from app.model.db.movie_model import Movie, Director, Actor, Series, Genre, Studio, Magnet
@@ -505,27 +505,32 @@ class JavdbParser(BaseMovieParser):
             return "", ""
 
     #------------------------------- Search actor ----start----------------------
-    def parse_actor_search_results(self, html_content):
+    def parse_actor_search_results(self, soup: BeautifulSoup):
         """
         解析演员搜索结果页面
         返回演员列表，每个演员包含名称、URI和照片链接
         """
         results = []
         try:
-            soup = BeautifulSoup(html_content, 'html.parser')
             actors_div = soup.find('div', id='actors')
 
             if not actors_div:
                 warning("未找到演员搜索结果区域")
                 return results
 
-            for actor_tag in actors_div.find_all('a'):
-                actor_info = {
-                    'name': actor_tag.get('title', ''),
-                    'uri': actor_tag.get('href', ''),
-                    'photo': actor_tag.find('img').get('src', '') if actor_tag.find('img') else ''
-                }
-                results.append(actor_info)
+            # 找到所有的actor-box
+            actor_boxes = actors_div.find_all('div', class_='actor-box')
+
+            # 遍历每个actor-box来获取其中的<a>标签
+            for box in actor_boxes:
+                actor_tag = box.find('a')
+                if actor_tag:
+                    actor_info = {
+                        'name': actor_tag.get('title', ''),
+                        'uri': actor_tag.get('href', ''),
+                        'photo': actor_tag.find('img').get('src', '') if actor_tag.find('img') else ''
+                    }
+                    results.append(actor_info)
 
             return results
         except Exception as e:
@@ -543,19 +548,22 @@ class JavdbParser(BaseMovieParser):
             # 获取电影总数
             section_meta = soup.find('span', class_='section-meta')
             movie_count = 0
-            if section_meta and section_meta.contents:
-                numbers = re.findall(r'\d+', section_meta.contents[-1])
+            if section_meta:
+                numbers = re.findall(r'\d+', section_meta.text)
                 if numbers:
                     movie_count = int(numbers[0])
 
             # 获取最大页数
             max_page = 1
-            pagination_links = soup.find_all('a', class_='pagination-link')
-            if pagination_links:
-                try:
-                    max_page = int(pagination_links[-1].text)
-                except (ValueError, IndexError):
-                    max_page = 1
+            pagination_list = soup.find('ul', class_='pagination-list')
+            if pagination_list:
+                pagination_links = pagination_list.find_all('a', class_='pagination-link')
+                if pagination_links:
+                    try:
+                        # 获取最后一个页码链接的文本
+                        max_page = int(pagination_links[-1].text)
+                    except (ValueError, IndexError):
+                        max_page = 1
 
             return movie_count, max_page
         except Exception as e:
@@ -570,20 +578,22 @@ class JavdbParser(BaseMovieParser):
         try:
             soup = BeautifulSoup(html_content, 'html.parser')
 
-            for movie_tag in soup.find_all('div', class_='item'):
-                try:
-                    # 获取评分和评价人数
-                    score_stars_tag = movie_tag.find('span', class_='value')
-                    if not score_stars_tag:
-                        continue
+            # 找到电影列表容器
+            movie_list = soup.find('div', class_='movie-list')
+            if not movie_list:
+                warning("未找到电影列表区域")
+                return movies
 
-                    # 提取评分和评价人数
-                    score_and_stars = re.findall(r'\d+\.\d+|\d+', score_stars_tag.text)
-                    if len(score_and_stars) <= 1 or int(score_and_stars[1]) <= min_evaluations:
+            # 遍历每个电影项
+            for movie_item in movie_list.find_all('div', class_='item'):
+                try:
+                    # 找到电影链接元素
+                    movie_link = movie_item.find('a', class_='box')
+                    if not movie_link:
                         continue
 
                     # 获取电影代码
-                    code_tag = movie_tag.find('strong')
+                    code_tag = movie_link.find('strong')
                     if not code_tag:
                         continue
 
@@ -591,11 +601,25 @@ class JavdbParser(BaseMovieParser):
                     if code.startswith("FC2"):
                         continue
 
-                    # 获取电影URI和标题
-                    movie_link = movie_tag.find('a')
-                    if not movie_link:
+                    # 获取评分和评价人数
+                    score_tag = movie_link.find('span', class_='value')
+                    if not score_tag:
                         continue
 
+                    # 提取评分和评价人数
+                    score_and_stars = re.findall(r'\d+\.\d+|\d+', score_tag.text)
+                    if len(score_and_stars) < 2:  # 确保至少有评分和人数两个数字
+                        continue
+
+                    # 转换评价人数为整数并进行判断
+                    try:
+                        evaluations = int(score_and_stars[-1])  # 最后一个数字通常是评价人数
+                        if evaluations <= min_evaluations:
+                            continue
+                    except (ValueError, IndexError):
+                        continue
+
+                    # 获取电影信息
                     movie_info = {
                         'code': code,
                         'title': movie_link.get('title', ''),
@@ -610,7 +634,6 @@ class JavdbParser(BaseMovieParser):
         except Exception as e:
             error(f"解析演员电影页面失败: {str(e)}")
             return []
-
     #------------------------------- Search actor ----end----------------------
 
     #------------------------------- actor_detail ----start----------------------

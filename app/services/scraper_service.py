@@ -399,6 +399,7 @@ class ScraperService:
 
         # 获取演员详情信息
         actor_details = self._get_actor_details(actor_info.get('uri', ''))
+        #actor_details = {}
 
         # 合并演员基本信息和详情信息
         actor_info.update(actor_details)
@@ -733,7 +734,8 @@ class ScraperService:
             return {}
 
         # 解析演员详情页
-        actor_details = self.parser.parse_actor_details_page(detail_page)
+        #actor_details = self.parser.parse_actor_details_page(detail_page)
+        actor_details = {}
         if not actor_details:
             logger.warning(f"解析演员详情页失败: {detail_url}")
             return {}
