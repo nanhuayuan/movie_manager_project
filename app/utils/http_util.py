@@ -21,6 +21,8 @@ class ProxyRegion(Enum):
     AUSTRALIA = "Australia"
     USA = "UnitedStates"
     UK = "UnitedKingdom"
+    HK = "HongKong"
+    TW = "Taiwan"
 
 
 class HttpUtil:
@@ -198,7 +200,9 @@ class HttpUtil:
         priority_regions = [
             ProxyRegion.AUSTRALIA,
             ProxyRegion.USA,
-            ProxyRegion.UK
+            ProxyRegion.UK,
+            ProxyRegion.HK,
+            ProxyRegion.TW
         ]
 
         for region in priority_regions:

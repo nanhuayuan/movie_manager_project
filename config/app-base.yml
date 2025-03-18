@@ -31,7 +31,7 @@ web_scraper:
   from: javdb
   javdb_url: "https://javdb.com"
   javdb_actor_search_uri: /search?q=%s&f=actor
-  javdb_actor_detail_uri: %s  # 直接使用演员URI，不需要额外参数
+  javdb_actor_detail_uri: '%s'  # 直接使用演员URI，不需要额外参数
   javbus_url: "https://www.javbus.com"
   cookie: ''
   proxy:
