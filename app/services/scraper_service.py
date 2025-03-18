@@ -29,6 +29,7 @@ class ScraperService:
         config = AppConfig().get_web_scraper_config()
         self.base_url = config.get('javdb_url', "https://javdb.com")
         self.actor_search_uri = config.get('javdb_actor_search_uri', "/search?q=%s&f=actor")
+        self.cookie = config.get('cookie')
         logger.info(f"初始化ScraperService，基础URL: {self.base_url}")
 
         # 获取配置
@@ -394,6 +395,9 @@ class ScraperService:
             logger.warning(f"未找到演员信息: {actor_name}")
             return
 
+        #  TODO 获得演员详情信息
+
+
         # 获取或创建演员记录
         actor = self._get_or_create_actor(actor_info)
         if not actor:
@@ -441,7 +445,7 @@ class ScraperService:
         search_url = f"{self.base_url}{self.actor_search_uri % urllib.parse.quote(actor_name)}"
         logger.info(f"搜索演员URL: {search_url}")
 
-        search_page = self.http_util.request(url=search_url)
+        search_page = self.http_util.request(url=search_url,cookie=self.cookie)
         if not search_page:
             logger.warning(f"获取演员搜索页面失败: {search_url}")
             return None
