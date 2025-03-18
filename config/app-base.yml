@@ -33,6 +33,7 @@ web_scraper:
   javdb_actor_search_uri: /search?q=%s&f=actor
   javdb_actor_detail_uri: /xxx?q=%s&f=actor
   javbus_url: "https://www.javbus.com"
+  cookies: ''
   proxy:
     enable: True
     host: 127.0.0.1
