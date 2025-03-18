@@ -67,6 +67,25 @@ class BaseMovieParser(ABC):
         """
         pass
 
+    @abstractmethod
+    def parse_actor_details_page(self, page_content: str) -> Dict[str, Any]:
+        """解析演员详情页面，提取演员详细信息
+
+        需要提取的信息包括：
+        - 中文名/英文名
+        - 生日
+        - 年龄
+        - 身高
+        - 三围
+        - 罩杯
+        - 出生地
+        - 兴趣爱好
+        - 照片
+        - ID信息
+        """
+        pass
+
+
 
     def supports_feature(self, feature_name: str) -> bool:
         """

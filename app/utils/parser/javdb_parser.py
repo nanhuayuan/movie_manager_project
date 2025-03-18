@@ -612,3 +612,114 @@ class JavdbParser(BaseMovieParser):
             return []
 
     #------------------------------- Search actor ----end----------------------
+
+    #------------------------------- actor_detail ----start----------------------
+    def parse_actor_details_page(self, page_content: str) -> Dict[str, Any]:
+        """解析演员详情页面，提取演员详细信息
+
+        需要提取的信息包括：
+        - 中文名/英文名
+        - 生日
+        - 年龄
+        - 身高
+        - 三围
+        - 罩杯
+        - 出生地
+        - 兴趣爱好
+        - 照片
+        - ID信息
+        """
+        actor_details = {}
+        try:
+            # 这里需要根据实际网页结构编写解析逻辑
+            # 以下仅为示例代码
+            from bs4 import BeautifulSoup
+            soup = BeautifulSoup(page_content, 'html.parser')
+
+            # 提取姓名
+            name_element = soup.select_one('.actor-name')
+            if name_element:
+                actor_details['name'] = name_element.text.strip()
+
+            # 提取中文名/英文名
+            name_cn_element = soup.select_one('.actor-name-cn')
+            if name_cn_element:
+                actor_details['name_cn'] = name_cn_element.text.strip()
+
+            name_en_element = soup.select_one('.actor-name-en')
+            if name_en_element:
+                actor_details['name_en'] = name_en_element.text.strip()
+
+            # 提取照片
+            photo_element = soup.select_one('.actor-photo img')
+            if photo_element and photo_element.has_attr('src'):
+                actor_details['photo'] = photo_element['src']
+
+            # 提取详细信息
+            info_elements = soup.select('.actor-info li')
+            for element in info_elements:
+                text = element.text.strip()
+
+                # 解析生日
+                if '生日' in text:
+                    birthday_text = text.split(':', 1)[1].strip()
+                    try:
+                        import datetime
+                        actor_details['birthday'] = datetime.datetime.strptime(birthday_text, '%Y-%m-%d').date()
+                    except:
+                        pass
+
+                # 解析年龄
+                elif '年龄' in text:
+                    age_text = text.split(':', 1)[1].strip()
+                    try:
+                        actor_details['age'] = int(age_text.split('岁')[0])
+                    except:
+                        pass
+
+                # 解析身高
+                elif '身高' in text:
+                    height_text = text.split(':', 1)[1].strip()
+                    try:
+                        actor_details['height'] = int(height_text.split('cm')[0])
+                    except:
+                        pass
+
+                # 解析三围
+                elif '三围' in text:
+                    bwh_text = text.split(':', 1)[1].strip()
+                    try:
+                        bwh_parts = bwh_text.split('/')
+                        if len(bwh_parts) >= 3:
+                            actor_details['bust'] = int(bwh_parts[0].strip())
+                            actor_details['waist'] = int(bwh_parts[1].strip())
+                            actor_details['hip'] = int(bwh_parts[2].strip())
+                    except:
+                        pass
+
+                # 解析罩杯
+                elif '罩杯' in text:
+                    cup_text = text.split(':', 1)[1].strip()
+                    actor_details['cupsize'] = cup_text
+
+                # 解析出生地
+                elif '出生地' in text:
+                    hometown_text = text.split(':', 1)[1].strip()
+                    actor_details['hometown'] = hometown_text
+
+                # 解析兴趣爱好
+                elif '兴趣爱好' in text:
+                    hobby_text = text.split(':', 1)[1].strip()
+                    actor_details['hobby'] = hobby_text
+
+            # 提取ID信息
+            javdb_id_element = soup.select_one('.actor-javdb-id')
+            if javdb_id_element:
+                actor_details['javdb_id'] = javdb_id_element.text.strip()
+
+            return actor_details
+        except Exception as e:
+            error(f"解析演员详情页面失败: {str(e)}")
+            return {}
+
+    #------------------------------- actor_detail ----end----------------------

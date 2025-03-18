@@ -1,6 +1,7 @@
 import time
 import random
 import urllib
+from datetime import datetime
 from typing import Optional, List, Dict, Any
 from sqlalchemy.orm import joinedload
 from sqlalchemy.exc import IntegrityError
@@ -29,6 +30,7 @@ class ScraperService:
         config = AppConfig().get_web_scraper_config()
         self.base_url = config.get('javdb_url', "https://javdb.com")
         self.actor_search_uri = config.get('javdb_actor_search_uri', "/search?q=%s&f=actor")
+        self.actor_detail_uri = config.get('javdb_actor_detail_uri', "%s")  # 添加演员详情URI配置
         self.cookie = config.get('cookie')
         logger.info(f"初始化ScraperService，基础URL: {self.base_url}")
 
@@ -395,8 +397,11 @@ class ScraperService:
             logger.warning(f"未找到演员信息: {actor_name}")
             return
 
-        #  TODO 获得演员详情信息
+        # 获取演员详情信息
+        actor_details = self._get_actor_details(actor_info.get('uri', ''))
 
+        # 合并演员基本信息和详情信息
+        actor_info.update(actor_details)
 
         # 获取或创建演员记录
         actor = self._get_or_create_actor(actor_info)
@@ -451,7 +456,6 @@ class ScraperService:
             return None
 
         # 解析演员搜索结果
-        # 注意：这里假设有一个parse_actor_search_results方法，实际情况可能需要调整
         actor_results = self.parser.parse_actor_search_results(search_page)
         if not actor_results or len(actor_results) == 0:
             logger.warning(f"未找到演员: {actor_name}")
@@ -476,16 +480,17 @@ class ScraperService:
         actor = self.service_map['actor'].get_by_name(actor_name)
         if actor:
             logger.info(f"找到现有演员记录: {actor_name}")
+            # 更新演员信息
+            self._update_actor_info(actor, actor_info)
             return actor
 
         # 创建新演员记录
         new_actor = Actor()
         new_actor.name = actor_name
-        new_actor.uri = actor_uri
+        new_actor.javdb_uri = actor_uri
 
-        # 如果有其他信息也可以设置
-        if 'photo' in actor_info:
-            new_actor.photo = actor_info['photo']
+        # 设置详细信息
+        self._set_actor_details(new_actor, actor_info)
 
         try:
             actor = self.service_map['actor'].create(new_actor)
@@ -497,6 +502,123 @@ class ScraperService:
         except Exception as e:
             logger.error(f"创建演员记录失败: {str(e)}")
             return None
+
+    def _set_actor_details(self, actor: Actor, actor_info: Dict[str, Any]) -> None:
+        """设置演员详细信息"""
+        # 设置基本信息
+        if 'photo' in actor_info:
+            actor.pic = actor_info['photo']
+
+        # 设置名称相关信息
+        if 'name_cn' in actor_info:
+            actor.name_cn = actor_info['name_cn']
+        if 'name_en' in actor_info:
+            actor.name_en = actor_info['name_en']
+
+        # 设置IDs
+        if 'javdb_id' in actor_info:
+            actor.javdb_id = actor_info['javdb_id']
+
+        # 设置URI
+        if 'uri' in actor_info:
+            actor.javdb_uri = actor_info['uri']
+
+        # 设置身体数据
+        if 'birthday' in actor_info and actor_info['birthday']:
+            try:
+                actor.birthday = actor_info['birthday']
+            except Exception as e:
+                logger.error(f"设置演员生日失败: {str(e)}")
+
+        if 'age' in actor_info:
+            actor.age = actor_info.get('age', 0)
+        if 'cupsize' in actor_info:
+            actor.cupsize = actor_info.get('cupsize', '')
+        if 'height' in actor_info:
+            actor.height = actor_info.get('height', 0)
+        if 'bust' in actor_info:
+            actor.bust = actor_info.get('bust', 0)
+        if 'waist' in actor_info:
+            actor.waist = actor_info.get('waist', 0)
+        if 'hip' in actor_info:
+            actor.hip = actor_info.get('hip', 0)
+
+        # 设置其他信息
+        if 'hometown' in actor_info:
+            actor.hometown = actor_info.get('hometown', '')
+        if 'hobby' in actor_info:
+            actor.hobby = actor_info.get('hobby', '')
+
+    def _update_actor_info(self, actor: Actor, actor_info: Dict[str, Any]) -> None:
+        """更新演员信息"""
+        # 已有的演员记录，更新非空字段
+        update_needed = False
+
+        if 'photo' in actor_info and actor_info['photo'] and not actor.pic:
+            actor.pic = actor_info['photo']
+            update_needed = True
+
+        # 更新名称相关信息
+        if 'name_cn' in actor_info and actor_info['name_cn'] and not actor.name_cn:
+            actor.name_cn = actor_info['name_cn']
+            update_needed = True
+        if 'name_en' in actor_info and actor_info['name_en'] and not actor.name_en:
+            actor.name_en = actor_info['name_en']
+            update_needed = True
+
+        # 更新IDs
+        if 'javdb_id' in actor_info and actor_info['javdb_id'] and not actor.javdb_id:
+            actor.javdb_id = actor_info['javdb_id']
+            update_needed = True
+
+        # 更新URI
+        if 'uri' in actor_info and actor_info['uri'] and not actor.javdb_uri:
+            actor.javdb_uri = actor_info['uri']
+            update_needed = True
+
+        # 更新身体数据
+        default_date = datetime.date(1970, 1, 1)
+        if 'birthday' in actor_info and actor_info['birthday'] and actor.birthday == default_date:
+            try:
+                actor.birthday = actor_info['birthday']
+                update_needed = True
+            except Exception as e:
+                logger.error(f"更新演员生日失败: {str(e)}")
+
+        if 'age' in actor_info and actor_info['age'] and actor.age == 0:
+            actor.age = actor_info['age']
+            update_needed = True
+        if 'cupsize' in actor_info and actor_info['cupsize'] and not actor.cupsize:
+            actor.cupsize = actor_info['cupsize']
+            update_needed = True
+        if 'height' in actor_info and actor_info['height'] and actor.height == 0:
+            actor.height = actor_info['height']
+            update_needed = True
+        if 'bust' in actor_info and actor_info['bust'] and actor.bust == 0:
+            actor.bust = actor_info['bust']
+            update_needed = True
+        if 'waist' in actor_info and actor_info['waist'] and actor.waist == 0:
+            actor.waist = actor_info['waist']
+            update_needed = True
+        if 'hip' in actor_info and actor_info['hip'] and actor.hip == 0:
+            actor.hip = actor_info['hip']
+            update_needed = True
+
+        # 更新其他信息
+        if 'hometown' in actor_info and actor_info['hometown'] and not actor.hometown:
+            actor.hometown = actor_info['hometown']
+            update_needed = True
+        if 'hobby' in actor_info and actor_info['hobby'] and not actor.hobby:
+            actor.hobby = actor_info['hobby']
+            update_needed = True
+
+        # 如果有更新，则保存到数据库
+        if update_needed:
+            try:
+                self.service_map['actor'].update(actor)
+                logger.info(f"更新演员信息成功: {actor.name}")
+            except Exception as e:
+                logger.error(f"更新演员信息失败: {str(e)}")
 
     def _save_actor_chart_entry(self, entry: ChartEntry, actor: Actor, chart_name: str):
         """保存演员榜单条目"""
@@ -595,3 +717,26 @@ class ScraperService:
         except Exception as e:
             logger.error(f"解析演员电影页面失败: {str(e)}")
             return []
+
+    def _get_actor_details(self, actor_uri: str) -> Dict[str, Any]:
+        """获取演员详细信息"""
+        if not actor_uri:
+            logger.warning("演员URI为空，无法获取详情")
+            return {}
+
+        detail_url = f"{self.base_url}{actor_uri}"
+        logger.info(f"获取演员详情页: {detail_url}")
+
+        detail_page = self.http_util.request(url=detail_url, cookie=self.cookie)
+        if not detail_page:
+            logger.warning(f"获取演员详情页失败: {detail_url}")
+            return {}
+
+        # 解析演员详情页
+        actor_details = self.parser.parse_actor_details_page(detail_page)
+        if not actor_details:
+            logger.warning(f"解析演员详情页失败: {detail_url}")
+            return {}
+
+        logger.info(f"成功获取演员详情: {actor_details.get('name', '未知')}")
+        return actor_details
