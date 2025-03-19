@@ -28,12 +28,22 @@ web_scraper:
   user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
   timeout_seconds: 120
   retry_attempts: 10
-  from: javdb
-  javdb_url: "https://javdb.com"
-  javdb_actor_search_uri: /search?q=%s&f=actor
-  javdb_actor_detail_uri: '%s'  # 直接使用演员URI，不需要额外参数
-  javbus_url: "https://www.javbus.com"
-  cookie: ''
+  from: javdb # javdb or javbus or
+  javdb:
+    domain: "https://javdb.com"
+    actor_search_uri: /search?q=%s&f=actor
+    actor_detail_uri: '%s'
+    cookie: ''
+    movie_filters:
+      min_evaluations: 200  # 最低评价人数
+      min_score: 3.5  # 最低评分
+      consecutive_failures: 5  # 连续不符合条件的电影数量，超过此值则终止
+    actor_sort_type: 4  # 演员页面的排序方式：1-评分，2-热度，3-想看人数，4-看过人数
+  javbus:
+    domain: "https://www.javbus.com"
+    actor_search_uri: /search?q=%s&f=actor
+    actor_detail_uri: '%s'  # 直接使用演员URI，不需要额外参数
+    cookie: ''
   proxy:
     enable: True
     host: 127.0.0.1

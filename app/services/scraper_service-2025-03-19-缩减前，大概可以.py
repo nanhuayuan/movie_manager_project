@@ -661,18 +661,11 @@ class ScraperService:
             logger.warning(f"演员 {actor.name} 没有URI")
             return []
 
-        # 根据不同来源构建演员URL
-        if self.scraper_from == 'javdb':
-            actor_url = f"{self.base_url}{actor.javdb_uri}"
-        elif self.scraper_from == 'javbus':
-            actor_url = f"{self.base_url}{actor.javbus_uri}"
-        else:
-            actor_url = f"{self.base_url}{actor.javlib_uri}"
-
+        actor_url = f"{self.base_url}{actor.uri}"
         logger.info(f"获取演员页面: {actor_url}")
 
         # 获取演员页面
-        actor_page = self.http_util.request(url=actor_url, cookie=self.cookie)
+        actor_page = self.http_util.request(url=actor_url)
         if not actor_page:
             logger.warning(f"获取演员页面失败: {actor_url}")
             return []
@@ -685,85 +678,30 @@ class ScraperService:
 
         logger.info(f"演员 {actor.name} 共有 {movie_count} 部电影，最大页数: {max_page}")
 
-        # 获取筛选条件
-        movie_filters = self.scraper_web_config.get('movie_filters', {})
-        min_evaluations = int(movie_filters.get('min_evaluations', 200))
-        min_score = float(movie_filters.get('min_score', 0.0))
-        consecutive_failures_limit = int(movie_filters.get('consecutive_failures', 5))
-
         # 获取所有符合条件的电影
         eligible_movies = []
         current_page = 1
-        consecutive_failures = 0
 
-        while current_page <= max_page and consecutive_failures < consecutive_failures_limit:
-            # 根据不同来源构建分页URL
-            page_url = self._build_actor_movies_page_url(actor, current_page)
+        while current_page <= max_page:
+            page_url = f"{self.base_url}{actor.uri}?page={current_page}&sort_type={self.actor_sort_type}"
             logger.info(f"获取演员电影页面 {current_page}/{max_page}: {page_url}")
 
-            page_content = self.http_util.request(url=page_url, cookie=self.cookie)
+            page_content = self.http_util.request(url=page_url)
             if not page_content:
                 logger.warning(f"获取演员电影页面失败: {page_url}")
                 current_page += 1
                 continue
 
             # 解析页面获取电影列表
-            page_movies = self.parser.parse_actor_movies_page(page_content)
-
-            # 应用筛选条件
-            page_eligible_movies = []
-            page_failures = 0
-
-            for movie in page_movies:
-                # 检查电影是否符合条件
-                if self._is_movie_eligible(movie, min_evaluations, min_score):
-                    page_eligible_movies.append(movie)
-                    consecutive_failures = 0  # 重置连续失败计数
-                else:
-                    page_failures += 1
-                    consecutive_failures += 1
-
-                    # 如果连续失败超过限制且当前页面上已经有足够多的失败项
-                    if consecutive_failures >= consecutive_failures_limit and page_failures >= 3:
-                        logger.info(f"连续 {consecutive_failures} 部电影不符合条件，停止获取")
-                        current_page = max_page + 1  # 强制结束循环
-                        break
-
-            eligible_movies.extend(page_eligible_movies)
-            logger.info(f"第 {current_page} 页找到 {len(page_eligible_movies)} 部符合条件的电影")
+            page_movies = self._parse_actor_movies_page(page_content)
+            if page_movies:
+                eligible_movies.extend(page_movies)
 
             current_page += 1
-            time.sleep(random.randint(1, 3))  # 减少等待时间，提高效率
+            time.sleep(random.randint(1, 5))
 
         logger.info(f"演员 {actor.name} 共获取到 {len(eligible_movies)} 部符合条件的电影")
         return eligible_movies
-
-    def _build_actor_movies_page_url(self, actor: Actor, page: int) -> str:
-        """根据不同来源构建演员电影页面URL"""
-        if self.scraper_from == 'javdb':
-            actor_uri = actor.javdb_uri
-        elif self.scraper_from == 'javbus':
-            actor_uri = actor.javbus_uri
-        else:
-            actor_uri = actor.javlib_uri
-
-        sort_param = f"&sort_type={self.actor_sort_type}" if self.scraper_from == 'javdb' else ""
-        return f"{self.base_url}{actor_uri}?page={page}{sort_param}"
-
-    def _is_movie_eligible(self, movie: Dict[str, Any], min_evaluations: int, min_score: float) -> bool:
-        """判断电影是否符合条件"""
-        # 获取评分和评价人数
-        score = float(movie.get('score', 0.0))
-        evaluations = int(movie.get('evaluations', 0))
-
-        # 根据条件判断
-        if min_evaluations > 0 and evaluations < min_evaluations:
-            return False
-
-        if min_score > 0.0 and score < min_score:
-            return False
-
-        return True
 
     def _parse_actor_page_info(self, page_content: str) -> tuple:
         """解析演员页面信息，获取电影数量和最大页数"""

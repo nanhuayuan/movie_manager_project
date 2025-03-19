@@ -1,137 +1,40 @@
 import sys
-from enum import Enum
-
 import requests
-from requests.exceptions import RequestException
 import time
 import random
 from bs4 import BeautifulSoup
-from typing import Optional, Dict, List
-
-from app.config.app_config import AppConfig
-from app.config.log_config import debug, info, warning, error, critical
-""""""
-import os
+from typing import Optional, Dict
 from datetime import datetime, timedelta
 
-#os.environ["http_proxy"] = "http://127.0.0.1:7890"
-#os.environ["https_proxy"] = "http://127.0.0.1:7890"
-
-class ProxyRegion(Enum):
-    AUSTRALIA = "Australia"
-    USA = "UnitedStates"
-    UK = "UnitedKingdom"
+from proxy_manager import ProxyManager
 
 
 class HttpUtil:
-    def __init__(self):
-        self.config = AppConfig()
-        self.scraper = self.config.get_web_scraper_config()
-        self.base_url = self.scraper.get('javdb_url', "https://javdb.com")
-        self.user_agent = self.scraper.get('user_agent', "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3")
-        self.timeout_seconds = self.scraper.get('timeout_seconds', 120)
-        self.retry_attempts = self.scraper.get('retry_attempts', 3)
+    def __init__(self, config=None):
+        """初始化HTTP工具类
 
-        self.proxy_config = self.config.get_proxy_config()
+        Args:
+            config: 可选的应用配置对象
+        """
+        self.config = config
 
-        self.proxy_enabled = self.proxy_config.get('enable', True)
-        self.proxy_host = self.proxy_config.get('host', "127.0.0.1")
-        self.proxy_port = self.proxy_config.get('port', 7890)
-        self.proxy_api_port = self.proxy_config.get('api_port', 59078)
-        self.proxy_secret = self.proxy_config.get('secret', "eb1dd2b3-975d-423f-81c9-3ee7e0551c31")
-        self.proxy_selector = self.proxy_config.get('selector', "Proxy")
+        # 初始化代理管理器
+        self.proxy_manager = ProxyManager(config)
 
-        self.proxy_headers = {
-            "content-type": "application/json",
-            'Authorization': f'Bearer {self.proxy_secret}'
-        }
+        # 从配置中获取HTTP请求参数
+        self.user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3"
+        self.timeout_seconds = 120
+        self.retry_attempts = 3
 
-        # 代理黑名单字典，记录被禁代理及禁止时间
-        self.proxy_blacklist: Dict[str, datetime] = {}
+        # 如果有配置对象，从中获取设置
+        if config:
+            scraper_config = getattr(config, 'get_web_scraper_config', lambda: {})()
+            self.user_agent = scraper_config.get('user_agent', self.user_agent)
+            self.timeout_seconds = scraper_config.get('timeout_seconds', self.timeout_seconds)
+            self.retry_attempts = scraper_config.get('retry_attempts', self.retry_attempts)
 
-    def _get_base_url(self) -> str:
-        return f'http://{self.proxy_host}:{self.proxy_api_port}'
-
-    def _get_all_proxies(self) -> Dict:
-        url = f'{self._get_base_url()}/proxies'
-        return requests.get(url, headers=self.proxy_headers).json()
-
-    def _get_selector_proxies(self) -> Dict:
-        url = f'{self._get_base_url()}/proxies/{self.proxy_selector}'
-        return requests.get(url, headers=self.proxy_headers).json()
-
-    def _is_proxy_available(self, proxy_info: Dict) -> bool:
-        if not proxy_info.get('history'):
-            return False
-        latest_delay = proxy_info['history'][-1]['delay']
-        return latest_delay != 0 and latest_delay < 2000
-
-    def _is_proxy_blacklisted(self, proxy_name: str) -> bool:
-        """检查代理是否被禁并清理过期黑名单"""
-        if proxy_name in self.proxy_blacklist:
-            # 如果距离被禁超过3天，自动解禁
-            if datetime.now() - self.proxy_blacklist[proxy_name] > timedelta(days=3):
-                del self.proxy_blacklist[proxy_name]
-                return False
-            return True
-        return False
-
-    def _get_region_proxies(self, proxies: Dict, region: ProxyRegion) -> List[Dict]:
-        """获取指定地区的可用代理并按延迟排序"""
-        region_proxies = []
-        for name, info in proxies['proxies'].items():
-            if region.value in name and not self._is_proxy_blacklisted(name):
-                if self._is_proxy_available(info):
-                    delay = info['history'][-1]['delay']
-                    region_proxies.append({
-                        'name': name,
-                        'delay': delay
-                    })
-        return sorted(region_proxies, key=lambda x: x['delay'])
-
-    def get_best_available_proxy(self) -> Optional[str]:
-        """按优先级获取最佳可用代理"""
-        all_proxies = self._get_all_proxies()
-
-        # 优先级地区
-        priority_regions = [
-            ProxyRegion.AUSTRALIA,
-            ProxyRegion.USA,
-            ProxyRegion.UK
-        ]
-
-        for region in priority_regions:
-            region_proxies = self._get_region_proxies(all_proxies, region)
-            if region_proxies:
-                best_proxy = region_proxies[0]['name']
-                print(f'找到{region.value}地区最佳代理: {best_proxy}')
-                return best_proxy
-
-        return None
-
-    def _switch_proxy(self, proxy_name: str) -> bool:
-        url = f'{self._get_base_url()}/proxies/{self.proxy_selector}'
-        data = {"name": proxy_name}
-        response = requests.put(url, json=data, headers=self.proxy_headers)
-        return response.status_code == 204
-
-    def change_proxy(self) -> bool:
-        """切换到最佳可用代理"""
-        # 标记当前代理为黑名单
-        current_proxy = self._get_selector_proxies()['now']
-        self.proxy_blacklist[current_proxy] = datetime.now()
-
-        best_proxy = self.get_best_available_proxy()
-        if not best_proxy:
-            print("无可用代理")
-            return False
-
-        if self._switch_proxy(best_proxy):
-            print(f'成功切换到代理: {best_proxy}')
-            return True
-        else:
-            print(f'切换代理失败: {best_proxy}')
-            return False
+            # 从配置中获取基础URL
+            self.base_url = scraper_config.get('javdb_url', "https://javdb.com")
 
     def local_request(self, url: str, cookie: str = '', print_content: bool = False) -> Optional[BeautifulSoup]:
         """专门用于内网请求，不使用代理"""
@@ -139,9 +42,19 @@ class HttpUtil:
 
     def request(self, url: str, proxy_enable: bool = True,
                 cookie: str = '', print_content: bool = False) -> Optional[BeautifulSoup]:
-        """发送HTTP请求并处理代理"""
+        """发送HTTP请求并处理代理
+
+        Args:
+            url: 请求的URL
+            proxy_enable: 是否启用代理
+            cookie: 可选的Cookie字符串
+            print_content: 是否打印响应内容
+
+        Returns:
+            BeautifulSoup对象，如果请求失败则返回None
+        """
         headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36',
+            'User-Agent': self.user_agent,
         }
         if cookie:
             headers['Cookie'] = cookie
@@ -159,22 +72,23 @@ class HttpUtil:
         # 内网地址默认不走代理，除非特别指定
         use_proxy = proxy_enable and not is_local_network
 
-        # 设置请求级别的代理，不影响全局环境变量
-        proxies = None
-        if use_proxy:
-            proxies = {
-                'http': f'http://{self.proxy_host}:{self.proxy_port}',
-                'https': f'http://{self.proxy_host}:{self.proxy_port}'
-            }
+        # 获取代理设置
+        proxies = self.proxy_manager.get_proxies_for_requests(use_proxy)
 
         # 请求时打印代理状态
         if print_content:
             print(f"请求URL: {url}, 使用代理: {'是' if proxies else '否'}")
 
-        while True:
+        attempts = 0
+        while attempts < self.retry_attempts:
             try:
                 # 通过proxies参数控制是否使用代理，不影响全局设置
-                response = requests.get(url=url, headers=headers, proxies=proxies, timeout=120)
+                response = requests.get(
+                    url=url,
+                    headers=headers,
+                    proxies=proxies,
+                    timeout=self.timeout_seconds
+                )
                 response.raise_for_status()
 
                 if print_content:
@@ -185,68 +99,54 @@ class HttpUtil:
 
                 if banned in soup.get_text("|", strip=True):
                     # 如果被禁，切换代理并重试
-                    proxy_change_success = self.change_proxy()
+                    proxy_change_success = self.proxy_manager.change_proxy()
                     if not proxy_change_success:
                         print("所有代理均已被禁，程序停止")
                         sys.exit(0)
+
+                    # 更新代理设置
+                    proxies = self.proxy_manager.get_proxies_for_requests(use_proxy)
+                    attempts += 1
                     continue
 
                 return soup
 
-            except RequestException as e:
+            except requests.exceptions.RequestException as e:
                 print(f"请求失败，错误: {e}")
+                attempts += 1
+
                 if use_proxy:
-                    proxy_change_success = self.change_proxy()
+                    # 尝试刷新Clash配置（端口可能已变化）
+                    self.proxy_manager.refresh_clash_config()
+
+                    # 切换代理
+                    proxy_change_success = self.proxy_manager.change_proxy()
                     if not proxy_change_success:
-                        print("无法切换到可用代理，程序停止")
-                        return None
+                        print("无法切换到可用代理")
+                        if attempts >= self.retry_attempts:
+                            print("已达最大重试次数，返回None")
+                            return None
+
+                    # 更新代理设置
+                    proxies = self.proxy_manager.get_proxies_for_requests(use_proxy)
+
+                    # 随机延迟，避免请求过于频繁
                     time.sleep(random.randint(20, 60))
                 else:
                     # 如果不使用代理但请求失败，直接返回None
                     print("不使用代理的请求失败，不进行重试")
                     return None
-    def request_old(self, url: str, proxy_enable: bool = True,
-                cookie: str = '', print_content: bool = False) -> Optional[BeautifulSoup]:
-        """发送HTTP请求并处理代理"""
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36',
-        }
-        if cookie:
-            headers['Cookie'] = cookie
 
-        proxies = {'http': f'{self.proxy_host}:{self.proxy_port}',
-                   'https': f'{self.proxy_host}:{self.proxy_port}'} if proxy_enable else None
-
-        while True:
-            try:
-                response = requests.get(url=url, headers=headers, proxies=proxies, timeout=120)
-                response.raise_for_status()
-
-                if print_content:
-                    print(f"响应内容: {response.text}")
-
-                soup = BeautifulSoup(response.text, 'lxml')
-                banned = "The owner of this website has banned your access based on your browser's behaving"
-
-                if banned in soup.get_text("|", strip=True):
-                    # 如果被禁，切换代理并重试
-                    proxy_change_success = self.change_proxy()
-                    if not proxy_change_success:
-                        print("所有代理均已被禁，程序停止")
-                        #raise Exception(f"请求失败，URL: {url}")
-                        sys.exit(0)
-                    continue
-
-                return soup
-
-            except RequestException as e:
-                print(f"请求失败，错误: {e}")
-                proxy_change_success = self.change_proxy()
-                if not proxy_change_success:
-                    print("无法切换到可用代理，程序停止")
-                    return None
-                time.sleep(random.randint(20, 60))
+        # 达到最大重试次数后返回None
+        return None
 
 
 if __name__ == '__main__':
-    HttpUtil().change_proxy()
+    # 测试代码
+    http_util = HttpUtil()
+    result = http_util.request("https://ipinfo.io/json", proxy_enable=True, print_content=True)
+    if result:
+        print("请求成功!")
+        print(result.text)
+    else:
+        print("请求失败!")
