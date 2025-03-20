@@ -540,7 +540,15 @@ class ScraperService:
 
     def _get_eligible_movies_for_actor(self, actor: Actor) -> List[Dict[str, Any]]:
         """获取演员的合格电影"""
-        if not actor.uri:
+
+        if self.scraper_from == 'javdb':
+            actor_url = f"{self.base_url}{actor.javdb_uri}"
+        elif self.scraper_from == 'javbus':
+            actor_url = f"{self.base_url}{actor.javbus_uri}"
+        else:
+            actor_url = f"{self.base_url}{actor.javlib_uri}"
+
+        if not actor_url:
             logger.warning(f"演员 {actor.name} 没有URI")
             return []
 

@@ -45,7 +45,7 @@ class ActorService(BaseService[Actor, ActorDAO]):
         """获取或创建演员记录"""
         # 获取或创建演员的代码...
 
-    def set_actor_details(self, actor: Actor, actor_info: Dict[str, Any]) -> None:
+    def set_actor_details(self, actor: Actor, actor_info: Dict[str, Any],scraper_from = 'javdb') -> None:
         """设置演员详细信息"""
         # 设置基本信息
         if 'photo' in actor_info:
@@ -63,7 +63,7 @@ class ActorService(BaseService[Actor, ActorDAO]):
 
         # 设置URI
         if 'uri' in actor_info:
-            if self.scraper_from == 'javdb':
+            if scraper_from == 'javdb':
                 actor.javdb_uri = actor_info['uri']
 
         # 设置身体数据
@@ -115,7 +115,7 @@ class ActorService(BaseService[Actor, ActorDAO]):
             update_needed = True
 
         # 更新URI
-        if self.scraper_from == 'javdb':
+        if scraper_from == 'javdb':
             if 'uri' in actor_info and actor_info['uri'] and not actor.javdb_uri:
                 actor.javdb_uri = actor_info['uri']
                 update_needed = True
