@@ -94,9 +94,9 @@ class ScraperService:
             try:
                 # 根据条目类型选择处理方法
                 if self.entity_type == 'actor':
-                    logger.info(f"处理演员条目: {entry.name}")
                     entry.entity_type = self.entity_type
                     entry.name = entry.serial_number
+                    logger.info(f"处理演员条目: {entry.name}")
                     self._process_actor_entry(entry, chart.name)
                 else:  # 默认为电影类型
                     if entry.serial_number and entry.serial_number.startswith('FC2'):
