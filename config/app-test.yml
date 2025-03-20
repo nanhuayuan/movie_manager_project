@@ -27,7 +27,7 @@ web_scraper:
     domain: "https://javdb.com"
     actor_search_uri: /search?q=%s&f=actor
     actor_detail_uri: '%s'  # 直接使用演员URI，不需要额外参数
-    cookie:
+    cookie: ''
   javbus:
     domain: "https://www.javbus.com"
     actor_search_uri: /search?q=%s&f=actor

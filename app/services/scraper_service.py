@@ -465,7 +465,7 @@ class ScraperService:
 
         # 如果找到多个演员，可能需要进一步处理
         if len(actor_results) > 1:
-            logger.info(f"找到多个演员信息，使用第一个结果: {actor_name}")
+            logger.info(f"找到｛len（actor_results）｝个演员信息，使用第一个结果: {actor_name}")
 
         return actor_results[0]
 
@@ -540,7 +540,7 @@ class ScraperService:
 
     def _get_eligible_movies_for_actor(self, actor: Actor) -> List[Dict[str, Any]]:
         """获取演员的合格电影"""
-
+        # 根据不同来源构建演员URL
         if self.scraper_from == 'javdb':
             actor_url = f"{self.base_url}{actor.javdb_uri}"
         elif self.scraper_from == 'javbus':
@@ -551,15 +551,6 @@ class ScraperService:
         if not actor_url:
             logger.warning(f"演员 {actor.name} 没有URI")
             return []
-
-        # 根据不同来源构建演员URL
-        if self.scraper_from == 'javdb':
-            actor_url = f"{self.base_url}{actor.javdb_uri}"
-        elif self.scraper_from == 'javbus':
-            actor_url = f"{self.base_url}{actor.javbus_uri}"
-        else:
-            actor_url = f"{self.base_url}{actor.javlib_uri}"
-
         logger.info(f"获取演员页面: {actor_url}")
 
         # 获取演员页面

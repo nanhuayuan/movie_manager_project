@@ -526,10 +526,13 @@ class JavdbParser(BaseMovieParser):
                 actor_tag = box.find('a')
                 if actor_tag:
                     actor_info = {
-                        'name': actor_tag.get('title', ''),
+                        'name': actor_tag.get('title', '').replace(" ", "").split(",")[0],
                         'uri': actor_tag.get('href', ''),
                         'photo': actor_tag.find('img').get('src', '') if actor_tag.find('img') else ''
                     }
+                    info(
+                        f"演员 : 姓名={actor_info['name']}, URI={actor_info['uri']}, 照片={actor_info['photo'] or '无'}"
+                    )
                     results.append(actor_info)
 
             return results
