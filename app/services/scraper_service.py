@@ -110,7 +110,7 @@ class ScraperService:
                     else:
                         warning(f"无法处理条目: {entry.serial_number}")
 
-                time.sleep(random.randint(1, 5))
+                time.sleep(random.randint(10, 60))
             except Exception as e:
                 error(f"处理榜单 '{chart.name}' 时出错: {str(e)}")
         info(f"榜单 '{chart.name}' 处理完成")
@@ -441,7 +441,7 @@ class ScraperService:
                     processed_movies.append(movie)
                     info(f"成功处理电影: {movie_info['code']}")
 
-                time.sleep(random.randint(1, 5))
+                time.sleep(random.randint(10, 60))
             except Exception as e:
                 error(f"处理演员电影时出错: {str(e)}")
 
