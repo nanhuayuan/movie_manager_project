@@ -35,8 +35,8 @@ web_scraper:
     actor_detail_uri: '%s'
     cookie: ''
     movie_filters:
-      min_evaluations: 200  # 最低评价人数
-      min_score: 3.5  # 最低评分
+      min_evaluations: 500  # 最低评价人数
+      min_score: 4.5  # 最低评分
       consecutive_failures: 5  # 连续不符合条件的电影数量，超过此值则终止
     actor_sort_type: 4  # 演员页面的排序方式：1-评分，2-热度，3-想看人数，4-看过人数
   javbus:
@@ -48,7 +48,7 @@ web_scraper:
     enable: True
     host: 127.0.0.1
     port: 7890
-    api_port: 60963
+    api_port: 9097
     secret: eb1dd2b3-975d-423f-81c9-3ee7e0551c31
     selector: Proxy # 策略组？
 

@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import date
 from typing import Optional, Dict, Any
 
 from app.config.app_config import AppConfig
@@ -92,7 +92,7 @@ class ActorService(BaseService[Actor, ActorDAO]):
         if 'hobby' in actor_info:
             actor.hobby = actor_info.get('hobby', '')
 
-    def update_actor_info(self, actor: Actor, actor_info: Dict[str, Any]) -> None:
+    def update_actor_info(self, actor: Actor, actor_info: Dict[str, Any],scraper_from = 'javdb') -> None:
         """更新演员信息"""
         # 已有的演员记录，更新非空字段
         update_needed = False
@@ -121,7 +121,8 @@ class ActorService(BaseService[Actor, ActorDAO]):
                 update_needed = True
 
         # 更新身体数据
-        default_date = datetime.date(1970, 1, 1)
+        #default_date = datetime.date(1970, 1, 1)
+        default_date = date(1970, 1, 1)
         if 'birthday' in actor_info and actor_info['birthday'] and actor.birthday == default_date:
             try:
                 actor.birthday = actor_info['birthday']

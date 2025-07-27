@@ -6,7 +6,7 @@ from bs4 import BeautifulSoup
 from typing import Optional, Dict
 from requests.exceptions import RequestException
 
-from proxy_manager import ProxyManager
+from app.utils.proxy_manager import ProxyManager
 
 
 class HttpUtil:
