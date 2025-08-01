@@ -1,7 +1,7 @@
 # app-test.yml - 测试环境特定配置
 database:
   password: "123456"
-  dbname: movie2
+  dbname: movie
 
 jellyfin:
   api_url: "http://192.168.31.45:8096"
@@ -15,10 +15,10 @@ jellyfin:
 chart:
   markdown_reader: normal # normal or top_250
   chart_type:
-    name: "Z师傅" # javdb_top2502 or javbus
-    description: 'come from javbus' # come from javbus
+    name: "JavLibray" # javdb_top2502 or javbus  or Z师傅  JavLibray
+    description: 'come from JavLibray' # come from javbus  JavLibray
   chart_content:
-    entity_type: actor # movie or actor
+    entity_type: movie # movie or actor
 
 
 web_scraper:

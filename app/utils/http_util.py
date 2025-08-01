@@ -100,8 +100,8 @@ class HttpUtil:
                 attempts += 1
 
                 if use_proxy:
-                    # 尝试刷新Clash配置（端口可能已变化）
-                    self.proxy_manager.refresh_clash_config()
+                    # 尝试刷新代理配置（端口可能已变化）
+                    self.proxy_manager.refresh_proxy_config()
 
                     # 切换代理
                     proxy_change_success = self.proxy_manager.change_proxy()

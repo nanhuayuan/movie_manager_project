@@ -34,15 +34,20 @@ class ScraperService:
         self.actor_search_uri = self.scraper_web_config.get('actor_search_uri', "/search?q=%s&f=actor")
         self.actor_detail_uri = self.scraper_web_config.get('actor_detail_uri', "%s")  # 添加演员详情URI配置
         self.cookie = self.scraper_web_config.get('cookie')
+        self.actor_sort_type = int(self.scraper_web_config.get('min_score', 4))
         info(f"初始化ScraperService，基础URL: {self.base_url}")
+
+        # 获取筛选条件
+        self.movie_filters = self.scraper_web_config.get('movie_filters', {})
+        self.min_evaluations = int(self.movie_filters.get('min_evaluations', 200))
+        self.min_score = float(self.movie_filters.get('min_score', 4.0))
+        self.consecutive_failures_limit = int(self.movie_filters.get('consecutive_failures', 5))
+        info(f"演员电影配置: 最低评价人数={self.min_evaluations},最低评分={self.min_score}, 连续不符合跳过阈值={self.consecutive_failures_limit},排序方式={self.actor_sort_type}")
 
         # 获取配置
         chart_config = AppConfig().get_chart_config()
         self.chart_content = chart_config.get('chart_content', {})
         self.entity_type = self.chart_content.get('entity_type', 'movie')
-        self.actor_min_evaluations = int(self.chart_content.get('actor_min_evaluations', 200))
-        self.actor_sort_type = int(self.chart_content.get('actor_sort_type', 4))
-        info(f"演员电影配置: 最低评价人数={self.actor_min_evaluations}, 排序方式={self.actor_sort_type}")
 
         # 初始化服务
         self.service_map = {
@@ -465,7 +470,7 @@ class ScraperService:
 
         # 如果找到多个演员，可能需要进一步处理
         if len(actor_results) > 1:
-            info(f"找到｛len（actor_results）｝个演员信息，使用第一个结果: {actor_name}")
+            info(f"找到{len(actor_results)}个演员信息，使用第一个结果: {actor_name}")
 
         return actor_results[0]
 
@@ -482,7 +487,7 @@ class ScraperService:
         if actor:
             info(f"找到现有演员记录: {actor_name}")
             # 更新演员信息
-            self.service_map['actor'].update_actor_info(actor, actor_info)
+            self.service_map['actor'].update_actor_info(actor, actor_info,scraper_from =self.scraper_from)
             return actor
 
         # 创建新演员记录
@@ -490,7 +495,7 @@ class ScraperService:
         new_actor.name = actor_name
 
         # 设置详细信息
-        self.service_map['actor'].set_actor_details(new_actor, actor_info)
+        self.service_map['actor'].set_actor_details(new_actor, actor_info,scraper_from =self.scraper_from)
 
         try:
             actor = self.service_map['actor'].create(new_actor)
@@ -566,18 +571,12 @@ class ScraperService:
 
         info(f"演员 {actor.name} 共有 {movie_count} 部电影，最大页数: {max_page}")
 
-        # 获取筛选条件
-        movie_filters = self.scraper_web_config.get('movie_filters', {})
-        min_evaluations = int(movie_filters.get('min_evaluations', 200))
-        min_score = float(movie_filters.get('min_score', 0.0))
-        consecutive_failures_limit = int(movie_filters.get('consecutive_failures', 5))
-
         # 获取所有符合条件的电影
         eligible_movies = []
         current_page = 1
         consecutive_failures = 0
 
-        while current_page <= max_page and consecutive_failures < consecutive_failures_limit:
+        while current_page <= max_page and consecutive_failures < self.consecutive_failures_limit:
             # 根据不同来源构建分页URL
             page_url = self._build_actor_movies_page_url(actor, current_page)
             info(f"获取演员电影页面 {current_page}/{max_page}: {page_url}")
@@ -597,7 +596,7 @@ class ScraperService:
 
             for movie in page_movies:
                 # 检查电影是否符合条件
-                if self._is_movie_eligible(movie, min_evaluations, min_score):
+                if self._is_movie_eligible(movie, self.min_evaluations, self.min_score):
                     page_eligible_movies.append(movie)
                     consecutive_failures = 0  # 重置连续失败计数
                 else:
@@ -605,7 +604,7 @@ class ScraperService:
                     consecutive_failures += 1
 
                     # 如果连续失败超过限制且当前页面上已经有足够多的失败项
-                    if consecutive_failures >= consecutive_failures_limit and page_failures >= 3:
+                    if consecutive_failures >= self.consecutive_failures_limit and page_failures >= 3:
                         info(f"连续 {consecutive_failures} 部电影不符合条件，停止获取")
                         current_page = max_page + 1  # 强制结束循环
                         break
@@ -658,7 +657,7 @@ class ScraperService:
         """解析演员电影页面，返回符合条件的电影列表"""
         try:
             movies = self.parser.parse_actor_movies_page(page_content,
-                                                         min_evaluations=self.actor_min_evaluations)
+                                                         min_evaluations=self.min_evaluations)
             return movies if movies else []
         except Exception as e:
             error(f"解析演员电影页面失败: {str(e)}")

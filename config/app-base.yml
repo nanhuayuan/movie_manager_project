@@ -1,8 +1,10 @@
 # app-base.yml - 基础应用配置
+# 配置策略：开发环境使用YAML配置，生产环境使用环境变量
 database:
   host: "localhost"
   port: 3306
   user: root
+  # password: 移至环境变量 DB_PASSWORD
   echo: true
   pool_size: 10
   echo_pool: true
@@ -12,10 +14,15 @@ redis:
   host: localhost
   port: 6379
   db: 0
+  # password: 移至环境变量 REDIS_PASSWORD
   cache_timeout_seconds: 300
 
 jellyfin:
   api_url: "http://127.0.0.1:8096"
+  # api_key: 移至环境变量 JELLYFIN_API_KEY
+  # user_id: 移至环境变量 JELLYFIN_USER_ID  
+  # item_id: 移至环境变量 JELLYFIN_ITEM_ID
+  # playlists_id: 移至环境变量 JELLYFIN_PLAYLISTS_ID
   client_type: jellyfinapi # jellyfinapi or jellyfin-apiclient-python
 
 everything:
@@ -46,11 +53,29 @@ web_scraper:
     cookie: ''
   proxy:
     enable: True
-    host: 127.0.0.1
-    port: 7890
-    api_port: 9097
-    secret: eb1dd2b3-975d-423f-81c9-3ee7e0551c31
-    selector: Proxy # 策略组？
+    # 代理类型优先级（按顺序尝试）
+    priority: 
+      - "clash_verge"      # 优先使用Clash.Verge
+      - "clash_for_windows" # 其次Clash for Windows
+    
+    # 默认代理配置（如果自动检测失败）
+    fallback:
+      enable: true
+      host: "127.0.0.1"
+      port: 7890
+      api_port: 9097
+      # secret: 移至环境变量 PROXY_SECRET
+      selector: "Proxy"
+      
+    # 特定软件配置覆盖（可选）
+    clash_verge:
+      config_path: "auto"  # auto表示自动检测，或手动指定路径
+      # 手动路径示例: "C:/Users/{user}/AppData/Roaming/io.github.clash-verge-rev.clash-verge-rev/config.yaml"
+      
+    clash_for_windows:
+      config_path: "auto"
+      # 手动路径示例: "C:/Users/{user}/AppData/Roaming/Clash for Windows/config.yaml"
+
 
 
 download_client:
@@ -58,6 +83,7 @@ download_client:
   host: "127.0.0.1"
   port: 6363
   username: "admin"
+  # password: 移至环境变量 QB_PASSWORD
   max_retry_attempts: 10
 
 chart:
